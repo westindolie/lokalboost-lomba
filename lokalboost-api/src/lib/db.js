@@ -22,7 +22,7 @@ const schemaPath = path.join(dirIni, '..', 'schema.sql')
  *     di satu instance "hilang" saat permintaan berikutnya jatuh ke instance
  *     lain. Dengan satu sumber di Turso, semua instance melihat data yang sama.
  */
-export const pakaiTurso = Boolean(config.turso.url)
+export const pakaiTurso = process.env.PAKAI_TURSO !== 'false' && Boolean(config.turso.url)
 
 export const db = pakaiTurso
   ? new Database(config.dbPath, { syncUrl: config.turso.url, authToken: config.turso.token })

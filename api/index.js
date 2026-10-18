@@ -26,7 +26,9 @@ const snapshot = path.join(akar, 'lokalboost-api', 'demo', 'lokalboost-demo.db')
 process.env.NODE_ENV ||= 'production'
 process.env.FOLDER_UNGGAHAN ||= '/tmp/unggahan'
 
-const pakaiTurso = Boolean(process.env.TURSO_DATABASE_URL || process.env.LIBSQL_URL)
+const pakaiTurso =
+  process.env.PAKAI_TURSO !== 'false' &&
+  Boolean(process.env.TURSO_DATABASE_URL || process.env.LIBSQL_URL)
 
 if (pakaiTurso) {
   // Data asli tinggal di Turso; berkas di /tmp hanya replika yang disinkron
@@ -36,7 +38,7 @@ if (pakaiTurso) {
   // Tanpa Turso: tiap instance memakai salinan data contoh sendiri. Tulisan
   // bisa tidak terlihat oleh instance lain, jadi frontend memasang pita demo.
   process.env.DB_PATH ||= '/tmp/lokalboost.db'
-  process.env.MODE_DEMO ||= 'true'
+  process.env.MODE_DEMO = 'true'
   if (!fs.existsSync(process.env.DB_PATH)) {
     fs.copyFileSync(snapshot, process.env.DB_PATH)
   }

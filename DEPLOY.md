@@ -30,6 +30,13 @@ disinkron di awal setiap permintaan (`lib/db.js` + middleware di `app.js`).
 Driver `libsql` punya API yang sama dengan better-sqlite3, jadi tidak ada query
 yang berubah.
 
+Untuk menayangkan demo saat operasi baca Turso dibatasi, atur env Vercel
+`PAKAI_TURSO=false`. Build akan melewati pengisian Turso, function memakai
+snapshot SQLite dan otomatis mengaktifkan `MODE_DEMO`. Data contoh bisa dibaca,
+tetapi tulisan hanya bertahan pada instance function yang menerimanya dan
+kembali ke snapshot saat instance baru dibuat. Hapus atau ubah nilai itu setelah
+akses baca Turso pulih agar data bersama aktif lagi.
+
 ## 2. Sambungkan Turso (sekali saja, lewat browser)
 
 1. Vercel → proyek **lokalboost-web** → **Storage** → **Create Database** → **Turso**

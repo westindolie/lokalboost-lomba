@@ -40,6 +40,10 @@ const authToken = process.env.TURSO_AUTH_TOKEN || process.env.LIBSQL_AUTH_TOKEN
 const timpa = process.argv.includes('--timpa') || process.env.ISI_ULANG_TURSO === 'ya'
 const UKURAN_BATCH = 400
 
+if (process.env.PAKAI_TURSO === 'false' && process.argv.includes('--lewati-tanpa-turso')) {
+  console.log('[TURSO] PAKAI_TURSO=false, pengisian dilewati (mode demo).')
+  process.exit(0)
+}
 if (!url && process.argv.includes('--lewati-tanpa-turso')) {
   console.log('[TURSO] TURSO_DATABASE_URL kosong, pengisian dilewati (mode demo).')
   process.exit(0)

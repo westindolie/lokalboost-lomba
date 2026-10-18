@@ -26,7 +26,7 @@ export const config = {
   batasUnggahMb: Number(process.env.BATAS_UNGGAH_MB || 200),
 
   /** Data bisa kembali ke contoh kapan saja (Vercel Function). Frontend memasang banner. */
-  modeDemo: process.env.MODE_DEMO === 'true',
+  modeDemo: process.env.MODE_DEMO === 'true' || process.env.PAKAI_TURSO === 'false',
 
   /**
    * Basis data Turso (libSQL). Kosong = SQLite lokal murni. Nama variabel
