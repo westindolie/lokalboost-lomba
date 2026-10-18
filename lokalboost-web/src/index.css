@@ -1,0 +1,79 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-cream text-ink font-sans antialiased;
+  }
+}
+
+@layer components {
+  .shell {
+    @apply mx-auto w-full max-w-shell px-6;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-navy/30;
+  }
+  .btn-primary {
+    @apply btn bg-navy text-white hover:bg-navy-light shadow-soft;
+  }
+  .btn-outline {
+    @apply btn border border-navy/25 text-navy hover:bg-navy hover:text-white;
+  }
+  .btn-ghost {
+    @apply btn text-navy hover:bg-navy/5;
+  }
+  .card {
+    @apply rounded-2xl border border-black/5 bg-white shadow-card;
+  }
+  /* whitespace-nowrap: label status seperti "Selesai — Dana Dikembalikan" atau
+     "Menunggu Tinjauan" sempat pecah dua baris di kolom sempit, sehingga
+     pilnya berubah tinggi dan tidak lagi sejajar dengan judul di sebelahnya.
+     Chip memang tidak pernah dimaksudkan membungkus. */
+  .chip {
+    @apply inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium;
+  }
+
+  /* Form — satu definisi untuk semua halaman.
+     Sebelumnya string class ini disalin di 6 halaman dengan focus-state berbeda. */
+  .label {
+    @apply mb-1.5 block text-sm font-semibold text-navy;
+  }
+  .input {
+    @apply w-full rounded-lg border border-black/10 bg-white px-4 py-3 text-sm text-ink outline-none transition-colors placeholder:text-ink-muted focus:border-navy/40 focus:ring-2 focus:ring-navy/15;
+  }
+  .field-help {
+    @apply mt-1.5 text-xs text-ink-muted;
+  }
+
+  .section-title {
+    @apply text-xl font-bold text-navy;
+  }
+  .page-title {
+    @apply text-3xl font-extrabold text-navy sm:text-4xl;
+  }
+  .stat-card {
+    @apply card p-6;
+  }
+
+  /* Chip status — menggantikan pemakaian ad-hoc red-500 / green-600 */
+  .chip-success {
+    @apply chip bg-success-soft text-success;
+  }
+  .chip-warning {
+    @apply chip bg-warning-soft text-warning;
+  }
+  .chip-danger {
+    @apply chip bg-danger-soft text-danger;
+  }
+  .chip-info {
+    @apply chip bg-navy/10 text-navy;
+  }
+  .chip-gold {
+    @apply chip bg-gold text-gold-text;
+  }
+}

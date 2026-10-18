@@ -1,0 +1,42 @@
+{
+  "name": "lokalboost-api",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Backend LokalBoost — marketplace UMKM x kreator pemula (Pay-Per-View + Rekber + AI)",
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js",
+    "seed": "node src/seed.js",
+    "seed:bila-kosong": "node src/seed-bila-kosong.js",
+    "mulai:railway": "node src/seed-bila-kosong.js && node src/index.js",
+    "simulasi": "node src/simulasi.js",
+    "bagikan": "node src/bagikan.js",
+    "setel": "node src/penyetel.js",
+    "cek-ai": "node src/cek-ai.js",
+    "model-openrouter": "node src/model-openrouter.js",
+    "model-nara": "node src/model-nara.js",
+    "test": "node --test \"tes/**/*.test.js\"",
+    "asap": "node tes/asap.mjs",
+    "snapshot-demo": "node src/snapshot-demo.js"
+  },
+  "engines": {
+    "node": "20.x || 22.x"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.68.0",
+    "@vercel/blob": "^2.8.0",
+    "@vercel/functions": "^3.9.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "jsonwebtoken": "^9.0.2",
+    "libsql": "^0.5.29",
+    "multer": "^2.2.0",
+    "nodemailer": "^9.0.3",
+    "openai": "^7.18.0"
+  },
+  "devDependencies": {
+    "@libsql/client": "^0.18.0"
+  }
+}

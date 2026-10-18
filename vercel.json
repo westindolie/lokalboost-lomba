@@ -1,0 +1,18 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "npm ci --prefix lokalboost-api && npm ci --prefix lokalboost-web",
+  "buildCommand": "npm run build --prefix lokalboost-web && node lokalboost-api/src/snapshot-demo.js && node lokalboost-api/src/isi-turso.js --lewati-tanpa-turso",
+  "outputDirectory": "lokalboost-web/dist",
+  "functions": {
+    "api/index.js": {
+      "includeFiles": "lokalboost-api/{demo/lokalboost-demo.db,src/schema.sql}",
+      "maxDuration": 30
+    }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api" },
+    { "source": "/unggahan/(.*)", "destination": "/api" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

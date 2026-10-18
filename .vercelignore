@@ -1,0 +1,14 @@
+# Vercel CLI tidak membaca .gitignore, jadi rahasia & berkas berat ditahan di sini.
+.git
+**/node_modules
+**/dist
+**/.env
+**/.env.*
+!**/.env.example
+**/*.db
+**/*.db-wal
+**/*.db-shm
+lokalboost-api/unggahan
+lokalboost-web/.vercel
+*.pdf
+ISI dan Fungsi

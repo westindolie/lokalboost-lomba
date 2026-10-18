@@ -1,0 +1,9 @@
+{
+  "name": "lokalboost",
+  "private": true,
+  "type": "module",
+  "description": "Akar penerbitan Vercel: frontend lokalboost-web + API lokalboost-api sebagai function (api/index.js)",
+  "engines": {
+    "node": "22.x"
+  }
+}

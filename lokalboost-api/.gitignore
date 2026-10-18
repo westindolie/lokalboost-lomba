@@ -1,0 +1,12 @@
+node_modules/
+.env
+# Salinan .env (mis. .env.sebelum-nvidia) ikut membawa kunci API, jadi jangan
+# sampai ada yang lolos ke riwayat git hanya karena namanya berakhiran lain.
+.env.*
+*.db
+*.db-wal
+*.db-shm
+unggahan/*
+!unggahan/.gitkeep
+demo/
+!.env.example

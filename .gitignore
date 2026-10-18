@@ -1,0 +1,33 @@
+# Dependensi
+node_modules/
+
+# Rahasia — jangan pernah masuk ke repositori
+.env
+.env.local
+.env.*.local
+
+# Basis data SQLite dan berkas pendampingnya
+*.db
+*.db-wal
+*.db-shm
+
+# Hasil build dan cache
+dist/
+.vercel/
+
+# Berkas unggahan pengguna
+lokalboost-api/unggahan/*
+!lokalboost-api/unggahan/.gitkeep
+
+# Sistem operasi & editor
+Thumbs.db
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Kredensial Turso hasil vercel env pull
+.env.turso
+
+# Token Vercel Blob hasil `vercel blob create-store`
+.env.local
