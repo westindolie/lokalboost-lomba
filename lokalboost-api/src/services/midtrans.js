@@ -75,6 +75,7 @@ export function bentukTagihan(p) {
   if (!p) return null
   return {
     orderId: p.order_id,
+    jenis: p.jenis || 'rekber',
     kampanyeId: p.kampanye_id,
     jumlah: p.jumlah,
     status: p.status,
@@ -119,7 +120,7 @@ export async function buatTagihan({ kampanyeId, umkm, metode }) {
   const masihBerlaku = db
     .prepare(
       `SELECT * FROM pembayaran
-       WHERE kampanye_id = ? AND status = 'menunggu'
+       WHERE kampanye_id = ? AND jenis = 'rekber' AND status = 'menunggu'
        ORDER BY dibuat_pada DESC`,
     )
     .all(kampanyeId)
@@ -133,20 +134,30 @@ export async function buatTagihan({ kampanyeId, umkm, metode }) {
   for (const lama of masihBerlaku) await batalkanTagihan(lama)
 
   const orderId = `LB-${kampanyeId.slice(0, 20)}-${Date.now().toString(36)}${crypto.randomBytes(2).toString('hex')}`
-  const profil = db.prepare('SELECT nama, email, telepon FROM pengguna WHERE id = ?').get(umkm.id) || {}
+  return bukaSnap({
+    orderId,
+    jenis: 'rekber',
+    kampanyeId,
+    umkmId: umkm.id,
+    jumlah,
+    metodeSah,
+    item: { id: kampanyeId.slice(0, 50), name: `Rekber: ${kampanye.nama}`.slice(0, 50) },
+    finish: `${config.alamatSitus}/umkm/kampanye/${kampanyeId}/kreator`,
+  })
+}
+
+/**
+ * Minta token Snap ke Midtrans lalu simpan baris tagihannya. Dipakai setor
+ * Rekber dan biaya pasang kampanye; bedanya hanya di `jenis` dan item.
+ */
+async function bukaSnap({ orderId, jenis, kampanyeId = null, umkmId, jumlah, metodeSah, item, finish }) {
+  const profil = db.prepare('SELECT nama, email, telepon FROM pengguna WHERE id = ?').get(umkmId) || {}
 
   const { status, isi } = await mintaMidtrans(`${alamat().snap}/snap/v1/transactions`, {
     method: 'POST',
     body: {
       transaction_details: { order_id: orderId, gross_amount: jumlah },
-      item_details: [
-        {
-          id: kampanyeId.slice(0, 50),
-          price: jumlah,
-          quantity: 1,
-          name: `Rekber: ${kampanye.nama}`.slice(0, 50),
-        },
-      ],
+      item_details: [{ ...item, price: jumlah, quantity: 1 }],
       customer_details: {
         first_name: (profil.nama || 'UMKM').slice(0, 50),
         ...(profil.email && { email: profil.email }),
@@ -154,7 +165,7 @@ export async function buatTagihan({ kampanyeId, umkm, metode }) {
       },
       ...(metodeSah && { enabled_payments: KANAL[metodeSah] }),
       expiry: { unit: 'minutes', duration: config.midtrans.menitKedaluwarsa },
-      callbacks: { finish: `${config.alamatSitus}/umkm/kampanye/${kampanyeId}/kreator` },
+      callbacks: { finish },
     },
   })
 
@@ -165,11 +176,57 @@ export async function buatTagihan({ kampanyeId, umkm, metode }) {
   }
 
   db.prepare(
-    `INSERT INTO pembayaran (order_id, kampanye_id, umkm_id, jumlah, snap_token, snap_url, metode, kedaluwarsa_pada)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-  ).run(orderId, kampanyeId, umkm.id, jumlah, isi.token, isi.redirect_url, metodeSah, menitKeDepan(config.midtrans.menitKedaluwarsa))
+    `INSERT INTO pembayaran (order_id, jenis, kampanye_id, umkm_id, jumlah, snap_token, snap_url, metode, kedaluwarsa_pada)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).run(orderId, jenis, kampanyeId, umkmId, jumlah, isi.token, isi.redirect_url, metodeSah, menitKeDepan(config.midtrans.menitKedaluwarsa))
 
   return { ...bentukTagihan(ambilTagihan(orderId)), snapToken: isi.token, dipakaiUlang: false }
+}
+
+/**
+ * Tagihan biaya pasang kampanye (services/biaya-pasang.js). Belum terikat
+ * kampanye apa pun: kampanyenya baru boleh dibuat setelah tagihan ini lunas.
+ * Aturan pakai ulang sama dengan setor Rekber, supaya menutup popup lalu
+ * menekan Bayar lagi tidak menghasilkan dua nomor VA.
+ */
+export async function buatTagihanBiayaPasang({ umkm, metode }) {
+  if (!midtransAktif()) throw galat409('Pembayaran Midtrans belum diaktifkan di server ini.')
+  const jumlah = config.biayaPasang
+  if (!(jumlah > 0)) throw galat409('Biaya pasang kampanye sedang tidak berlaku.')
+
+  const tiket = db
+    .prepare(
+      `SELECT 1 FROM pembayaran
+       WHERE umkm_id = ? AND jenis = 'biaya_pasang' AND status = 'lunas' AND kampanye_id IS NULL LIMIT 1`,
+    )
+    .get(umkm.id)
+  if (tiket) throw galat409('Biaya pasang sudah lunas. Lanjutkan mengisi kampanye Anda.')
+
+  const metodeSah = KANAL[metode] ? metode : null
+  const masihBerlaku = db
+    .prepare(
+      `SELECT * FROM pembayaran
+       WHERE umkm_id = ? AND jenis = 'biaya_pasang' AND status = 'menunggu'
+       ORDER BY dibuat_pada DESC`,
+    )
+    .all(umkm.id)
+  const batasPakaiUlang = menitKeDepan(5)
+  const cocok = masihBerlaku.find(
+    (p) => p.jumlah === jumlah && (p.metode || null) === metodeSah && p.kedaluwarsa_pada > batasPakaiUlang,
+  )
+  if (cocok) return { ...bentukTagihan(cocok), snapToken: cocok.snap_token, dipakaiUlang: true }
+  for (const lama of masihBerlaku) await batalkanTagihan(lama)
+
+  const orderId = `LBP-${umkm.id.slice(0, 20)}-${Date.now().toString(36)}${crypto.randomBytes(2).toString('hex')}`
+  return bukaSnap({
+    orderId,
+    jenis: 'biaya_pasang',
+    umkmId: umkm.id,
+    jumlah,
+    metodeSah,
+    item: { id: 'biaya-pasang-kampanye', name: 'Biaya pasang kampanye LokalBoost' },
+    finish: `${config.alamatSitus}/umkm/kampanye/baru`,
+  })
 }
 
 /**
@@ -222,7 +279,11 @@ async function ambilStatusMidtrans(orderId) {
   return isi
 }
 
-/** Pelunasan: tandai tagihan lunas + isi escrow, keduanya atau tidak sama sekali. */
+/**
+ * Pelunasan: tandai tagihan lunas + isi escrow, keduanya atau tidak sama sekali.
+ * Biaya pasang kampanye tidak menyentuh escrow: lunasnya baris itu sendiri
+ * adalah tiket untuk membuat satu kampanye.
+ */
 const lunasi = transaksional((p, jenisBayar, statusMentah) => {
   const klaim = db
     .prepare(
@@ -232,6 +293,16 @@ const lunasi = transaksional((p, jenisBayar, statusMentah) => {
     )
     .run(jenisBayar, statusMentah, sekarang(), p.order_id)
   if (klaim.changes === 0) return false // sudah diproses oleh pemanggil lain
+
+  if (p.jenis === 'biaya_pasang') {
+    kirimNotifikasi(p.umkm_id, {
+      jenis: 'dana',
+      judul: 'Biaya pasang kampanye lunas',
+      isi: `Pembayaran ${rupiah(p.jumlah)} diterima. Anda sekarang bisa mengisi dan menerbitkan satu kampanye.`,
+      tautan: '/umkm/kampanye/baru',
+    })
+    return true
+  }
 
   setorDanaInti({
     kampanyeId: p.kampanye_id,
@@ -255,7 +326,9 @@ function tandaiPerluTinjau(p, sebab, { jenisBayar, statusMentah }) {
   kirimNotifikasi(p.umkm_id, {
     jenis: 'dana',
     judul: 'Pembayaran diterima, sedang ditinjau',
-    isi: `Pembayaran ${rupiah(p.jumlah)} (${p.order_id}) sudah kami terima tetapi belum bisa masuk Rekber: ${sebab} Tim LokalBoost akan menghubungi Anda untuk pengembalian dana.`,
+    isi: `Pembayaran ${rupiah(p.jumlah)} (${p.order_id}) sudah kami terima tetapi belum bisa ${
+      p.jenis === 'biaya_pasang' ? 'dicatat sebagai biaya pasang' : 'masuk Rekber'
+    }: ${sebab} Tim LokalBoost akan menghubungi Anda untuk pengembalian dana.`,
     tautan: '/umkm/dana',
   })
   for (const admin of db.prepare("SELECT id FROM pengguna WHERE peran = 'admin'").all()) {

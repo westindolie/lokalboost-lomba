@@ -62,6 +62,11 @@ rutaAdmin.get(
         ),
         totalDisetor: angka('SELECT COALESCE(SUM(jumlah_disetor), 0) AS n FROM escrow'),
         komisiTerkumpul: angka('SELECT COALESCE(SUM(komisi_platform), 0) AS n FROM escrow'),
+        // Pendapatan LokalBoost di luar Rekber (services/biaya-pasang.js).
+        biayaPasangTerkumpul: angka(
+          "SELECT COALESCE(SUM(jumlah), 0) AS n FROM pembayaran WHERE jenis = 'biaya_pasang' AND status = 'lunas'",
+        ),
+        biayaPasangTarif: config.biayaPasang,
         dicairkanKeKreator: angka(
           "SELECT COALESCE(SUM(nominal), 0) AS n FROM transaksi WHERE jenis = 'pencairan'",
         ),

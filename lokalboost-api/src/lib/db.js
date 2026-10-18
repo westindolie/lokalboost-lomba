@@ -126,6 +126,12 @@ for (const [kolom, def] of [
 ]) {
   tambahKolomBila('video', kolom, def)
 }
+// Biaya pasang kampanye memakai tabel pembayaran yang sama dengan setor Rekber.
+// Indeksnya dibuat di sini, bukan di schema.sql: di basis data lama kolomnya
+// baru ada setelah baris tambahKolomBila ini.
+tambahKolomBila('pembayaran', 'jenis', "TEXT NOT NULL DEFAULT 'rekber'")
+db.exec('CREATE INDEX IF NOT EXISTS idx_pembayaran_jenis ON pembayaran (umkm_id, jenis, status)')
+
 let bukuBesarBaru = false
 for (const kolom of ['views_terhitung', 'bruto_akrual', 'komisi_akrual', 'bersih_dicairkan', 'milestone_dicairkan', 'hangus']) {
   bukuBesarBaru = tambahKolomBila('lamaran', kolom, 'INTEGER NOT NULL DEFAULT 0') || bukuBesarBaru

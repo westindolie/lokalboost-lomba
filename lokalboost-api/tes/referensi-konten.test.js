@@ -18,6 +18,8 @@ import os from 'node:os'
 
 process.env.DB_PATH = path.join(os.tmpdir(), `lokalboost-referensi-${Date.now()}.db`)
 process.env.NODE_ENV = 'test'
+// Gerbang biaya pasang kampanye diuji sendiri di biaya-pasang.test.js.
+process.env.BIAYA_PASANG_KAMPANYE = '0'
 process.env.BOCORKAN_OTP = 'true'
 process.env.TURSO_DATABASE_URL = ''
 process.env.MIDTRANS_SERVER_KEY = ''

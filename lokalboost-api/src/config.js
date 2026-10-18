@@ -105,6 +105,14 @@ export const config = {
    */
   komisiPersen: Number(process.env.KOMISI_PERSEN || 5),
 
+  /**
+   * Biaya pasang kampanye: pendapatan pengembang LokalBoost. UMKM membayar
+   * sekali per kampanye SEBELUM formulir kampanye terbuka
+   * (services/biaya-pasang.js). Terpisah dari dana Rekber dan tidak pernah
+   * dibayarkan ke kreator. 0 = gerbang mati.
+   */
+  biayaPasang: Math.max(0, Math.round(Number(process.env.BIAYA_PASANG_KAMPANYE ?? 10_000)) || 0),
+
   /** Ambang aturan AI Anti-Fraud (lihat services/antifraud.js). */
   antiFraud: {
     durasiMinimalDetik: Number(process.env.AF_DURASI_MIN || 3),

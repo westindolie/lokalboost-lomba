@@ -38,11 +38,17 @@ export function muatSnap({ snapJs, clientKey }) {
  *
  * @returns {Promise<{popup: 'sukses'|'pending'|'galat'|'ditutup', tagihan: object, kampanye: object}>}
  */
-export async function bayarDenganSnap({ konfigurasi, kampanyeId, metode }) {
-  const [{ tagihan }, snap] = await Promise.all([
-    api.buatTagihan({ kampanyeId, metode }),
-    muatSnap(konfigurasi),
-  ])
+export function bayarDenganSnap({ konfigurasi, kampanyeId, metode }) {
+  return bukaSnap(konfigurasi, () => api.buatTagihan({ kampanyeId, metode }))
+}
+
+/** Sama seperti bayarDenganSnap, untuk biaya pasang kampanye (belum ada kampanye). */
+export function bayarBiayaPasangDenganSnap({ konfigurasi, metode }) {
+  return bukaSnap(konfigurasi, () => api.tagihanBiayaPasang({ metode }))
+}
+
+async function bukaSnap(konfigurasi, mintaTagihan) {
+  const [{ tagihan }, snap] = await Promise.all([mintaTagihan(), muatSnap(konfigurasi)])
 
   const popup = await new Promise((selesai) => {
     snap.pay(tagihan.snapToken, {

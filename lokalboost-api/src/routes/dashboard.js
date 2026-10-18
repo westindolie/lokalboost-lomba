@@ -100,6 +100,8 @@ rutaDashboard.get(
       // Persentase komisi adalah syarat layanan, bukan rahasia — halaman
       // Setor Dana harus bisa menyebutnya tanpa menebak.
       komisiPersen: config.komisiPersen,
+      // Biaya pasang per kampanye juga syarat layanan (landing menyebutnya).
+      biayaPasang: config.biayaPasang,
     })
   }),
 )

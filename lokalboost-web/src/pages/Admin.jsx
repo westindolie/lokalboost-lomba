@@ -120,7 +120,7 @@ export default function Admin() {
 
       <motion.div variants={stagger} initial="initial" animate="animate" className="mt-8 space-y-6">
         {/* Metrik keberhasilan PRD §3.2 */}
-        <div className="grid gap-5 md:grid-cols-2 2xl:grid-cols-4">
+        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
           <StatCard
             label="Kampanye Berjalan"
             nilai={r.kampanye.berjalan}
@@ -146,6 +146,13 @@ export default function Admin() {
             nilai={r.keuangan.komisiTerkumpul}
             prefiks="Rp "
             sub="Dipotong dari bagian kreator"
+            icon={Wallet}
+          />
+          <StatCard
+            label="Biaya Pasang Kampanye"
+            nilai={r.keuangan.biayaPasangTerkumpul ?? 0}
+            prefiks="Rp "
+            sub={`${rupiah(r.keuangan.biayaPasangTarif ?? 0)} per kampanye, di luar Rekber`}
             icon={Wallet}
           />
         </div>

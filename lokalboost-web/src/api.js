@@ -141,6 +141,10 @@ export const api = {
   buatTagihan: (data) => minta('POST', '/api/pembayaran/tagihan', { body: data }),
   cekPembayaran: (orderId) => minta('POST', `/api/pembayaran/${encodeURIComponent(orderId)}/cek`),
   tagihanKampanye: (id) => minta('GET', `/api/pembayaran/kampanye/${id}`),
+  // Biaya pasang kampanye: dibayar sebelum formulir kampanye terbuka.
+  statusBiayaPasang: () => minta('GET', '/api/pembayaran/biaya-pasang'),
+  tagihanBiayaPasang: (data) => minta('POST', '/api/pembayaran/biaya-pasang/tagihan', { body: data }),
+  bayarBiayaPasangSimulasi: () => minta('POST', '/api/pembayaran/biaya-pasang/simulasi'),
   setorDana: (id, data) => minta('POST', `/api/kampanye/${id}/setor`, { body: data }),
   periksaKampanye: (id) => minta('POST', `/api/kampanye/${id}/periksa`),
   moderasiKampanye: (id) => minta('GET', `/api/kampanye/${id}/moderasi`),

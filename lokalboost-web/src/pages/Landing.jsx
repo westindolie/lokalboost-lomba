@@ -10,6 +10,7 @@ import { AngkaNaik } from '../components/Feedback.jsx'
 import { stagger, fadeUp } from '../components/PageTransition.jsx'
 import { HoverCard, Tekan } from '../components/ui.jsx'
 import { tekan } from '../motion.js'
+import { rupiah } from '../format.js'
 import { Shield, Store, Video, Chart, Doc, Users, Eye, ArrowRight, Sparkles } from '../components/icons.jsx'
 
 const langkahUMKM = [
@@ -253,8 +254,8 @@ export default function Landing() {
           />
           <h2 className="relative text-2xl font-extrabold sm:text-3xl">Siap mulai promosi?</h2>
           <p className="relative mx-auto mt-3 max-w-lg text-white/75">
-            Daftar gratis. Dana kampanye ditahan di Rekber dan hanya terpakai untuk penonton asli;
-            sisanya kembali ke Anda.
+            Daftar gratis.{statistik?.biayaPasang > 0 && <> Pasang kampanye cukup {rupiah(statistik.biayaPasang)}.</>} Dana
+            kampanye ditahan di Rekber dan hanya terpakai untuk penonton asli; sisanya kembali ke Anda.
           </p>
           <div className="relative mt-7 flex flex-wrap justify-center gap-3">
             <motion.div {...tekan}>

@@ -17,6 +17,8 @@ import os from 'node:os'
 const dbSementara = path.join(os.tmpdir(), `lokalboost-admin-${Date.now()}.db`)
 process.env.DB_PATH = dbSementara
 process.env.NODE_ENV = 'test'
+// Gerbang biaya pasang kampanye diuji sendiri di biaya-pasang.test.js.
+process.env.BIAYA_PASANG_KAMPANYE = '0'
 // Tes membaca kode OTP dari respons. Dikunci di sini karena .env laptop
 // sengaja memakai BOCORKAN_OTP=false, dan dotenv tidak menimpa nilai yang sudah ada.
 process.env.BOCORKAN_OTP = 'true'

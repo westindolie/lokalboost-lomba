@@ -8,12 +8,53 @@ import {
   alamatSnapJs,
   bentukTagihan,
   buatTagihan,
+  buatTagihanBiayaPasang,
   midtransAktif,
   sinkronkanTagihan,
   tanganiNotifikasi,
 } from '../services/midtrans.js'
+import { bayarSimulasi, statusBiayaPasang } from '../services/biaya-pasang.js'
 
 export const rutaPembayaran = Router()
+
+// ---------------------------------------------------------------------
+//  Biaya pasang kampanye (services/biaya-pasang.js)
+// ---------------------------------------------------------------------
+
+/** GET /api/pembayaran/biaya-pasang — sudah bayar? tagihan yang menunggu? riwayat. */
+rutaPembayaran.get(
+  '/biaya-pasang',
+  wajibPeran('umkm'),
+  bungkus((req, res) => {
+    res.json(statusBiayaPasang(req.pengguna.id))
+  }),
+)
+
+/** POST /api/pembayaran/biaya-pasang/tagihan — tagihan Snap biaya pasang. */
+rutaPembayaran.post(
+  '/biaya-pasang/tagihan',
+  wajibPeran('umkm'),
+  batasLaju({
+    maks: 10,
+    detik: 60,
+    kunci: (req) => req.pengguna?.id && `tagihan-pasang:${req.pengguna.id}`,
+    pesan: 'Terlalu banyak permintaan tagihan. Tunggu sebentar lalu coba lagi.',
+  }),
+  bungkus(async (req, res) => {
+    const tagihan = await buatTagihanBiayaPasang({ umkm: req.pengguna, metode: req.body?.metode })
+    res.status(tagihan.dipakaiUlang ? 200 : 201).json({ tagihan })
+  }),
+)
+
+/** POST /api/pembayaran/biaya-pasang/simulasi — hanya saat Midtrans mati. */
+rutaPembayaran.post(
+  '/biaya-pasang/simulasi',
+  wajibPeran('umkm'),
+  bungkus((req, res) => {
+    const tagihan = bayarSimulasi(req.pengguna.id)
+    res.status(201).json({ tagihan, ...statusBiayaPasang(req.pengguna.id) })
+  }),
+)
 
 /**
  * GET /api/pembayaran/konfigurasi
@@ -84,7 +125,10 @@ rutaPembayaran.post(
     if (p.umkm_id !== req.pengguna.id && req.pengguna.peran !== 'admin') throw galat403()
 
     const tagihan = await sinkronkanTagihan(req.params.orderId)
-    const kampanye = db.prepare('SELECT id, status FROM kampanye WHERE id = ?').get(p.kampanye_id)
+    // Biaya pasang yang belum dipakai belum punya kampanye: kampanye = null.
+    const kampanye = p.kampanye_id
+      ? db.prepare('SELECT id, status FROM kampanye WHERE id = ?').get(p.kampanye_id) || null
+      : null
     res.json({ tagihan, kampanye })
   }),
 )

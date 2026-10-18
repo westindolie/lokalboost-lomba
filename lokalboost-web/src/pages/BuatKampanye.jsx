@@ -9,8 +9,12 @@ import { EASE } from '../motion.js'
 import { KATEGORI, LOKASI } from '../data/pilihan.js'
 import { cekTeks, galatPertama } from '../validasi.js'
 import { useDraf } from '../draf.jsx'
-import { Sparkles, ArrowRight, Image } from '../components/icons.jsx'
+import { Sparkles, ArrowRight, Image, Check } from '../components/icons.jsx'
 import ReferensiKonten from '../components/ReferensiKonten.jsx'
+import GerbangBiayaPasang from '../components/GerbangBiayaPasang.jsx'
+import { MemuatBlok } from '../components/Muat.jsx'
+import { api, useApi } from '../api.js'
+import { rupiah } from '../format.js'
 
 const BATAS_FOTO_KAMPANYE = 2 * 1024 * 1024
 
@@ -52,6 +56,13 @@ export default function BuatKampanye() {
   const [fotoSibuk, setFotoSibuk] = useState(false)
   const [galatFoto, setGalatFoto] = useState('')
   const pemilihFoto = useRef(null)
+
+  // Biaya pasang dibayar sebelum formulir terbuka. Kampanye yang sudah
+  // tersimpan (kembali dari langkah 3 untuk menyunting) tidak ditagih lagi.
+  const biaya = useApi(() => api.statusBiayaPasang(), [])
+  const { data: konfigBayar } = useApi(() => api.konfigurasiPembayaran(), [])
+  const sedangSunting = Boolean(draf.kampanyeIdDibuat)
+  const perluBayar = Boolean(biaya.data?.aktif && !biaya.data.sudahBayar && !sedangSunting)
 
   async function pilihFotoProduk(e) {
     const berkas = e.target.files?.[0]
@@ -119,8 +130,28 @@ export default function BuatKampanye() {
         <KepalaWizard
           langkah={1}
           judul="Buat Kampanye Baru"
-          sub="Mari promosikan produk Anda ke jangkauan yang lebih luas dengan bantuan kreator lokal."
+          sub={
+            perluBayar
+              ? `Bayar biaya pasang ${rupiah(biaya.data.biaya)} untuk membuka formulir kampanye.`
+              : 'Mari promosikan produk Anda ke jangkauan yang lebih luas dengan bantuan kreator lokal.'
+          }
         />
+
+        {biaya.memuat && !sedangSunting ? (
+          <MemuatBlok tinggi="h-48" jumlah={2} />
+        ) : perluBayar ? (
+          <GerbangBiayaPasang status={biaya.data} konfigurasi={konfigBayar} onLunas={biaya.muatUlang} />
+        ) : (
+        <>
+        {biaya.data?.aktif && biaya.data.tiket && !sedangSunting && (
+          <motion.p
+            variants={fadeUp}
+            role="status"
+            className="mb-4 flex items-center gap-2 rounded-xl border border-success-border bg-success-soft px-4 py-3 text-sm font-semibold text-success"
+          >
+            <Check size={16} /> Biaya pasang {rupiah(biaya.data.biaya)} lunas. Berlaku untuk satu kampanye ini.
+          </motion.p>
+        )}
 
         <motion.div variants={fadeUp} className="card p-7">
           <div className="flex items-start gap-3 rounded-xl bg-cream-200 px-4 py-3.5 text-sm text-ink-soft">
@@ -281,6 +312,8 @@ export default function BuatKampanye() {
           >
             {galat}
           </motion.p>
+        )}
+        </>
         )}
 
         <motion.div variants={fadeUp} className="mt-6">

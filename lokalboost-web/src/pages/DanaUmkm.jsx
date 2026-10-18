@@ -21,6 +21,8 @@ import { Shield, Wallet, Clock, Chart, Plus, Store, ArrowRight } from '../compon
 export default function DanaUmkm() {
   const dashboard = useApi(() => api.dashboardUmkm(), [])
   const dompet = useApi(() => api.dompet(), [])
+  // Tidak ikut menahan halaman: tanpa data ini sisa halaman tetap lengkap.
+  const biayaPasang = useApi(() => api.statusBiayaPasang(), [])
 
   if (dashboard.memuat || dompet.memuat) {
     return (
@@ -220,7 +222,41 @@ export default function DanaUmkm() {
             </Tekan>
           </motion.div>
         </div>
+
+        <RiwayatBiayaPasang data={biayaPasang.data} />
       </motion.div>
     </AppShell>
+  )
+}
+
+/** Biaya pasang (layanan LokalBoost) dicatat terpisah: uangnya bukan dana Rekber. */
+function RiwayatBiayaPasang({ data }) {
+  if (!data?.aktif && !data?.riwayat?.length) return null
+  return (
+    <motion.div variants={fadeUp} className="card min-w-0 p-7">
+      <h2 className="section-title">Biaya Pasang Kampanye</h2>
+      <p className="mt-1 text-sm text-ink-soft">
+        {rupiah(data.biaya)} per kampanye, dibayar sebelum mengisi kampanye. Terpisah dari dana Rekber.
+      </p>
+      {data.riwayat.length === 0 ? (
+        <p className="mt-4 rounded-xl bg-cream-100 px-4 py-6 text-center text-sm text-ink-soft">
+          Belum ada biaya pasang yang dibayar.
+        </p>
+      ) : (
+        <ul className="mt-4 divide-y divide-black/5">
+          {data.riwayat.map((p) => (
+            <li key={p.orderId} className="flex items-center justify-between gap-3 py-3 text-sm">
+              <div className="min-w-0">
+                <p className="truncate font-semibold text-navy">{p.namaKampanye || 'Belum dipakai untuk kampanye'}</p>
+                <p className="text-xs text-ink-muted">
+                  {tanggal(p.dibuatPada)} · {p.status === 'lunas' ? 'Lunas' : 'Sedang ditinjau'}
+                </p>
+              </div>
+              <span className="shrink-0 font-semibold text-navy">−{rupiah(p.jumlah)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </motion.div>
   )
 }

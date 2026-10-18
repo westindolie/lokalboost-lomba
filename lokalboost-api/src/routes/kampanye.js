@@ -34,6 +34,7 @@ import {
 } from '../services/moderasi-kampanye.js'
 import { batalkanTagihan } from '../services/midtrans.js'
 import { batasLaju } from '../lib/batas.js'
+import { pakaiTiket, pastikanAdaTiket } from '../services/biaya-pasang.js'
 import {
   adalahPeserta,
   alokasikanProduk,
@@ -338,6 +339,10 @@ rutaKampanye.post(
     // Divalidasi sebelum transaksi: tautan salah = 400, bukan kampanye setengah jadi.
     const referensi = rapikanReferensiSimpan(b.referensi)
 
+    // Biaya pasang (pendapatan LokalBoost) dibayar sebelum kampanye boleh ada.
+    // Dicek setelah validasi isian, supaya isian salah tetap dijawab 400.
+    pastikanAdaTiket(req.pengguna.id)
+
     let id = buatSlug(b.nama)
     let n = 1
     while (ambil(id)) id = `${buatSlug(b.nama)}-${++n}`
@@ -379,6 +384,8 @@ rutaKampanye.post(
       simpanProdukReward(id, produk)
 
       db.prepare("INSERT INTO escrow (kampanye_id, status) VALUES (?, 'kosong')").run(id)
+      // Di transaksi yang sama: tiket habis dipakai kampanye lain = kampanye ini batal.
+      pakaiTiket(req.pengguna.id, id)
     })()
 
     res.status(201).json({

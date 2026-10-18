@@ -256,8 +256,14 @@ CREATE INDEX IF NOT EXISTS idx_transaksi_pengguna ON transaksi (pengguna_id, dib
 --   perlu_tinjau uang SUDAH diterima Midtrans tapi escrow tidak bisa diisi
 --                (kampanye sudah didanai tagihan lain, nominal tidak cocok,
 --                kampanye hilang). Butuh refund/penanganan manual admin.
+--
+-- jenis 'biaya_pasang' = biaya pasang kampanye (pendapatan LokalBoost,
+-- services/biaya-pasang.js). Dibayar SEBELUM kampanye ada, jadi kampanye_id
+-- masih NULL; baris lunas dengan kampanye_id NULL adalah "tiket" yang
+-- terpakai (diisi kampanye_id) saat POST /api/kampanye. Tidak menyentuh escrow.
 CREATE TABLE IF NOT EXISTS pembayaran (
   order_id      TEXT PRIMARY KEY,
+  jenis         TEXT NOT NULL DEFAULT 'rekber',  -- rekber | biaya_pasang
   kampanye_id   TEXT REFERENCES kampanye(id) ON DELETE SET NULL,
   umkm_id       TEXT NOT NULL REFERENCES pengguna(id) ON DELETE CASCADE,
   jumlah        INTEGER NOT NULL,

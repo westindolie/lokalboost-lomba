@@ -60,6 +60,7 @@ export default function SetorDana() {
   const [info, setInfo] = useState('')
   const [tagihanTerakhir, setTagihanTerakhir] = useState(null)
   const [moderasi, setModerasi] = useState(null)
+  const [perluBiayaPasang, setPerluBiayaPasang] = useState(false)
 
   const { data: konfigBayar } = useApi(() => api.konfigurasiPembayaran(), [])
   const pakaiMidtrans = Boolean(konfigBayar?.aktif)
@@ -161,6 +162,8 @@ export default function SetorDana() {
       // bukan hanya kalimat galat.
       if (err.rincian?.moderasi) setModerasi(err.rincian.moderasi)
       else setGalat(err.message)
+      // 402 = biaya pasang belum lunas (mis. draf lama dari sebelum gerbang ada).
+      setPerluBiayaPasang(err.status === 402)
     } finally {
       setSibuk(false)
       setTahap('')
@@ -405,9 +408,14 @@ export default function SetorDana() {
               />
 
               {galat && (
-                <p role="alert" className="mt-4 rounded-lg bg-danger-soft px-4 py-3 text-sm text-danger">
-                  {galat}
-                </p>
+                <div role="alert" className="mt-4 rounded-lg bg-danger-soft px-4 py-3 text-sm text-danger">
+                  <p>{galat}</p>
+                  {perluBiayaPasang && (
+                    <Link to="/umkm/kampanye/baru" className="mt-2 inline-block font-semibold text-navy hover:underline">
+                      Bayar biaya pasang →
+                    </Link>
+                  )}
+                </div>
               )}
 
               {info && (
