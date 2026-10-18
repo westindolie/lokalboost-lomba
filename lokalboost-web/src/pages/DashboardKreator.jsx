@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'motion/react'
 import AppShell from '../components/AppShell.jsx'
@@ -25,6 +26,22 @@ import { Wallet, Chart, Eye, Sparkles, MapPin, Store, Doc } from '../components/
 export default function DashboardKreator() {
   const { profil } = useSesi()
   const { data, galat, memuat, muatUlang } = useApi(() => api.dashboardKreator(), [])
+  const [demoSibuk, setDemoSibuk] = useState('')
+  const [pesanDemo, setPesanDemo] = useState('')
+
+  const selesaikanDemo = async (kampanye) => {
+    setDemoSibuk(kampanye.id)
+    setPesanDemo('')
+    try {
+      const hasil = await api.simulasiPencairanKampanye(kampanye.id)
+      setPesanDemo(`${hasil.pesan} Total ${rupiah(hasil.totalDibayar)} dibagi kepada ${hasil.kreatorDibayar} kreator.`)
+      await muatUlang()
+    } catch (err) {
+      setPesanDemo(err.message)
+    } finally {
+      setDemoSibuk('')
+    }
+  }
 
   if (memuat) {
     return (
@@ -73,9 +90,7 @@ export default function DashboardKreator() {
             nilai={ringkasan.kampanyeBerjalan}
             sufiks=" Proyek"
             sub={
-              ringkasan.lamaranMenunggu > 0
-                ? `${ringkasan.lamaranMenunggu} undangan menunggu jawaban`
-                : `${ringkasan.kampanyeSelesai} kampanye sudah selesai`
+              `${ringkasan.kampanyeSelesai} kampanye sudah selesai`
             }
             icon={Chart}
           />
@@ -99,7 +114,7 @@ export default function DashboardKreator() {
                 <EmptyState
                   icon={Store}
                   title="Belum ada kampanye yang dikerjakan"
-                  subtitle="UMKM mengundang kreator yang mereka pilih. Lengkapi profil dan akun sosialmu agar siap menerima undangan."
+                  subtitle="Cari kampanye yang cocok dan bergabung langsung. Di mode normal, lengkapi profil serta verifikasi akun sosial sebelum ikut."
                   action="Cari Kampanye"
                   to="/marketplace"
                 />
@@ -135,6 +150,16 @@ export default function DashboardKreator() {
                         </div>
                         <StatusChip status={st.label} tone={st.tone} denyut={k.status === 'berjalan'} />
                       </Link>
+                      {data.modeDemo && k.demoSiap && k.status === 'berjalan' && (
+                        <button
+                          type="button"
+                          onClick={() => selesaikanDemo(k)}
+                          disabled={Boolean(demoSibuk)}
+                          className="mx-5 mb-4 rounded-lg border border-gold-border bg-gold px-4 py-2 text-sm font-semibold text-gold-text disabled:opacity-60"
+                        >
+                          {demoSibuk === k.id ? 'Mengirim saldo demo…' : 'Selesaikan demo dan masukkan saldo'}
+                        </button>
+                      )}
                     </motion.div>
                   )
                 })}
@@ -148,6 +173,7 @@ export default function DashboardKreator() {
                 )}
               </div>
             )}
+            {pesanDemo && <p role="status" className="mt-3 rounded-lg bg-gold px-4 py-3 text-sm text-gold-text">{pesanDemo}</p>}
           </motion.div>
 
           {/* Rekomendasi Kreator */}

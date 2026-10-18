@@ -117,7 +117,7 @@ export default function Dompet() {
           >
             <Wallet size={140} className="pointer-events-none absolute -right-8 -top-6 text-white/5" />
             <p className="relative text-xs font-semibold uppercase tracking-wide text-white/60">
-              Saldo Siap Ditarik
+              {data.modeDemo ? 'Saldo Demo Kreator' : 'Saldo Siap Ditarik'}
             </p>
             <p className="relative mt-2 text-4xl font-extrabold sm:text-5xl">
               <AngkaNaik nilai={d.saldo} prefiks="Rp " />
@@ -125,6 +125,11 @@ export default function Dompet() {
             <p className="relative mt-2 text-sm text-white/70">
               Sudah lolos verifikasi sistem anti-fraud dan dilepas dari Rekber.
             </p>
+            {data.modeDemo && (
+              <p className="relative mt-3 rounded-lg bg-white/15 px-3 py-2 text-xs text-white">
+                Saldo ini simulasi untuk demo. Tidak ada uang sungguhan dan tidak dapat ditarik.
+              </p>
+            )}
             <div className="relative mt-5 flex flex-wrap gap-3">
               <motion.a {...tekan} href="#tarik" className="btn bg-white px-5 py-2.5 text-navy hover:bg-cream-200">
                 Tarik Dana <ArrowRight size={16} />
@@ -155,7 +160,11 @@ export default function Dompet() {
           {/* Form penarikan */}
           <motion.div variants={fadeUp} id="tarik" className="card scroll-mt-24 p-7 lg:col-span-2">
             <h2 className="section-title">Tarik Dana</h2>
-            <p className="mt-1 text-sm text-ink-soft">Tahap uji coba: penarikan tercatat, tapi transfer ke rekening belum berjalan otomatis.</p>
+            <p className="mt-1 text-sm text-ink-soft">
+              {data.modeDemo
+                ? 'Penarikan dimatikan. Saldo demo hanya untuk memperagakan alur aplikasi.'
+                : 'Tahap uji coba: penarikan tercatat, tapi transfer ke rekening belum berjalan otomatis.'}
+            </p>
 
             <AnimatePresence mode="wait" initial={false}>
               {hasil ? (
@@ -330,7 +339,7 @@ export default function Dompet() {
                   <motion.button
                     {...tekan}
                     type="submit"
-                    disabled={sibuk || d.saldo <= 0}
+                    disabled={data.modeDemo || sibuk || d.saldo <= 0}
                     className="btn-primary mt-6 w-full py-3 disabled:opacity-60"
                   >
                     {sibuk ? 'Memproses…' : <>Ajukan Penarikan <ArrowRight size={18} /></>}

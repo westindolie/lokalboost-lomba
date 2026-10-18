@@ -128,7 +128,7 @@ export default function ProfilKreator() {
                   </Link>
                 ) : adalahUmkm ? (
                   <Link to="/umkm/kampanye/baru" className="btn-primary px-5 py-2.5">
-                    Buat Kampanye untuk Diundang <ArrowRight size={16} />
+                    Cari Kampanye <ArrowRight size={16} />
                   </Link>
                 ) : (
                   <Link to="/marketplace" className="btn-outline px-5 py-2.5">

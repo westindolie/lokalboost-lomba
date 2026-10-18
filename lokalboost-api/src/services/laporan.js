@@ -140,14 +140,9 @@ export function ringkasanKreator(kreatorId) {
   // Views milik kreator ini saja: satu kampanye bisa diikuti banyak kreator.
   const totalViews = kampanye.reduce((jumlah, k) => jumlah + viewsKreator(k.id, kreatorId), 0)
 
-  const lamaranMenunggu = db
-    .prepare("SELECT COUNT(*) AS n FROM lamaran WHERE kreator_id = ? AND status = 'menunggu' AND jenis = 'undangan'")
-    .get(kreatorId).n
-
   return {
     kampanyeBerjalan: kampanye.filter((k) => k.status === 'berjalan').length,
     kampanyeSelesai: kampanye.filter((k) => k.status === 'selesai').length,
-    lamaranMenunggu,
     totalViewsTervalidasi: totalViews,
     saldo: dompet.saldo,
     saldoTertahan: dompet.saldo_tertahan,

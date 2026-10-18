@@ -20,6 +20,7 @@
  * seperti tayangan di pemutar LokalBoost.
  */
 import { db } from '../lib/db.js'
+import { config } from '../config.js'
 import { GalatHttp, buatId, galat400, galat403, galat404, galat409, galat429, sekarang } from '../lib/util.js'
 import { tanyaModel } from './ai.js'
 import { ambilReferensi, uraiTautanKonten } from './referensi-konten.js'
@@ -199,6 +200,33 @@ export async function setorTautanVideo({ kampanyeId, kreator, url, judul }) {
     .get(k.id, kreator.id).n
   if (jumlah >= MAKS_VIDEO_PER_KREATOR) {
     throw galat409(`Maksimal ${MAKS_VIDEO_PER_KREATOR} video per kreator di satu kampanye.`)
+  }
+
+  if (config.modeDemo) {
+    const kembar = db.prepare('SELECT kampanye_id FROM video WHERE url = ?').get(dasar.url)
+    if (kembar) throw galat409('Tautan ini sudah dipakai di kampanye lain.')
+    const id = buatId('vid')
+    const namaPlatform = { tiktok: 'TikTok', instagram: 'Instagram', youtube: 'YouTube' }[dasar.platform]
+    const hasilDemo = JSON.stringify({
+      status: 'demo',
+      alasan: 'Tautan dicatat untuk simulasi presentasi. Platform, pemilik akun, isi video, dan views tidak diperiksa.',
+    })
+    db.prepare(
+      `INSERT INTO video
+         (id, kampanye_id, kreator_id, judul, durasi_detik, status, moderasi, sumber, url, platform,
+          platform_id, views_diakui, views_tertahan, kecocokan, kecocokan_hasil)
+       VALUES (?, ?, ?, ?, 30, 'tayang', 'lolos', 'tautan', ?, ?, ?, 0, 0, 'demo', ?)`
+    ).run(
+      id,
+      k.id,
+      kreator.id,
+      String(judul || `Tautan demo ${namaPlatform}`).slice(0, 120),
+      dasar.url,
+      dasar.platform,
+      `${dasar.platform}:DEMO:${id}`,
+      hasilDemo,
+    )
+    return db.prepare('SELECT * FROM video WHERE id = ?').get(id)
   }
 
   const akunSaya = akunKreator(kreator.id, dasar.platform)

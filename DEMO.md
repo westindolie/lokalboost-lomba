@@ -63,6 +63,45 @@ npm run dev      # port 5173
 
 Buka <http://localhost:5173>.
 
+### Alur UMKM ke kreator tanpa views sungguhan
+
+Mode demo membuat biaya pasang dan setor anggaran kampanye menjadi simulasi.
+Setelah kreator mengirim tautan video yang disetujui, tombol **Selesaikan demo
+dan masukkan saldo** membagi anggaran tunai kepada kreator yang videonya
+diterima. Sistem tidak membuat tayangan palsu; laporan tetap menunjukkan views
+yang benar-benar ada. Saldo demo terlihat di dompet, tetapi penarikan dinonaktifkan.
+
+Aktifkan hanya untuk presentasi:
+
+```powershell
+$env:MODE_DEMO = "true"
+cd lokalboost-api
+npm.cmd run seed   # menghapus data lokal dan mengisi akun contoh
+npm.cmd run dev
+```
+
+Lalu di situs lokal:
+
+1. UMKM buat kampanye reward tunai dan tentukan anggaran sendiri. Mode demo
+   melewati biaya pasang, pemeriksaan etika tetap berjalan, lalu anggaran
+   simulasi masuk ke Rekber.
+2. Kreator masuk ke marketplace dan langsung mengikuti kampanye. Tidak ada
+   undangan atau persetujuan UMKM. Untuk demo, kreator tidak perlu
+   menghubungkan akun sosial; mode normal tetap mensyaratkan profil dan
+   verifikasi minimal satu akun sosial.
+3. Kreator kirim tautan video. Video tetap harus lolos pemeriksaan AI/UMKM,
+   tetapi jumlah views tidak menjadi syarat demo.
+4. Setelah video berstatus tayang, kreator tekan **Selesaikan demo dan masukkan
+   saldo** dari dashboard. Anggaran dibagi rata kepada para kreator yang
+   sudah mengirim video yang disetujui. Kampanye ditutup dan sisa dana, bila
+   ada, kembali ke dompet UMKM.
+
+Transaksi simulasi diberi awalan `DEMO:`. Jangan pakai mode ini untuk transaksi
+atau saldo sungguhan. Untuk demo online, `MODE_DEMO=true` harus diatur pada
+Environment Variables Vercel lalu proyek di-deploy ulang. Itu akan membuat
+deployment produksi berjalan dalam mode simulasi; jangan aktifkan jika situs
+sedang dipakai untuk transaksi nyata.
+
 ## Akun untuk diperagakan
 
 | Peran | Email | Kata sandi |

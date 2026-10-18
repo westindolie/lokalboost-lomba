@@ -146,15 +146,12 @@ export const api = {
   tagihanBiayaPasang: (data) => minta('POST', '/api/pembayaran/biaya-pasang/tagihan', { body: data }),
   bayarBiayaPasangSimulasi: () => minta('POST', '/api/pembayaran/biaya-pasang/simulasi'),
   setorDana: (id, data) => minta('POST', `/api/kampanye/${id}/setor`, { body: data }),
+  simulasiPencairanKampanye: (id) => minta('POST', `/api/kampanye/${id}/demo-selesaikan`),
   periksaKampanye: (id) => minta('POST', `/api/kampanye/${id}/periksa`),
   moderasiKampanye: (id) => minta('GET', `/api/kampanye/${id}/moderasi`),
   bandingKampanye: (id, alasan) => minta('POST', `/api/kampanye/${id}/banding`, { body: { alasan } }),
-  undang: (id, kreatorId, pesan) =>
-    minta('POST', `/api/kampanye/${id}/undang`, { body: { kreatorId, pesan } }),
+  ikutiKampanye: (id) => minta('POST', `/api/kampanye/${id}/lamaran`),
   lamaranKampanye: (id) => minta('GET', `/api/kampanye/${id}/lamaran`),
-  setujuiLamaran: (id, lamaranId) =>
-    minta('POST', `/api/kampanye/${id}/lamaran/${lamaranId}/setujui`),
-  tolakLamaran: (id, lamaranId) => minta('POST', `/api/kampanye/${id}/lamaran/${lamaranId}/tolak`),
   rekomendasiKreator: (id) => minta('GET', `/api/kampanye/${id}/rekomendasi-kreator`),
   laporan: (id) => minta('GET', `/api/kampanye/${id}/laporan`),
   ringkasanAi: (id) => minta('GET', `/api/kampanye/${id}/ringkasan-ai`),

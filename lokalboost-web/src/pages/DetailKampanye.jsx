@@ -1,4 +1,5 @@
 import { Link, useParams } from 'react-router-dom'
+import { useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import AppShell from '../components/AppShell.jsx'
 import { stagger, fadeUp } from '../components/PageTransition.jsx'
@@ -7,7 +8,7 @@ import { DaftarSosial } from '../components/TautanSosial.jsx'
 import { AngkaNaik, CentangSukses } from '../components/Feedback.jsx'
 import { MemuatHalaman, GalatMuat } from '../components/Muat.jsx'
 import { EASE, DUR } from '../motion.js'
-import { rupiah, ribuan, statusKampanye, gradasi, statusLamaran } from '../format.js'
+import { rupiah, ribuan, statusKampanye, gradasi } from '../format.js'
 import { api, useApi } from '../api.js'
 import { useSesi } from '../sesi.jsx'
 import StatusReward from '../components/StatusReward.jsx'
@@ -20,7 +21,7 @@ import {
 const NAMA_PLATFORM = { tiktok: 'TikTok', instagram: 'Instagram', youtube: 'YouTube' }
 
 /**
- * Detail Kampanye — kreator melihat brief dan UMKM mengundang kreator pilihan.
+ * Detail kampanye. Kreator dapat bergabung langsung selama reward tersedia.
  *
  * Kepemilikan tidak lagi ditebak dari daftar id di berkas mock: kampanye
  * membawa `umkmId` dan `kreatorId` sendiri, jadi mode halaman ditentukan
@@ -31,6 +32,21 @@ export default function DetailKampanye() {
   const { pengguna, sudahMasuk, adalahUmkm, adalahKreator } = useSesi()
 
   const { data, galat, memuat, muatUlang } = useApi(() => api.kampanyeDetail(id), [id])
+  const [ikutMemuat, setIkutMemuat] = useState(false)
+  const [galatIkut, setGalatIkut] = useState('')
+
+  const ikutiKampanye = async () => {
+    setIkutMemuat(true)
+    setGalatIkut('')
+    try {
+      await api.ikutiKampanye(id)
+      await muatUlang()
+    } catch (e) {
+      setGalatIkut(e.message)
+    } finally {
+      setIkutMemuat(false)
+    }
+  }
 
   const k = data?.kampanye
   const milikSaya = adalahUmkm && k?.umkmId === pengguna?.id
@@ -64,7 +80,7 @@ export default function DetailKampanye() {
   const st = statusKampanye(k.status, k.sisaHari)
   const sudahJalan = k.status === 'berjalan'
   const pencapaian = k.targetViews ? Math.round((k.viewsTervalidasi / k.targetViews) * 100) : 0
-  // Peserta bergabung setelah UMKM mengirimkan undangan.
+  // Keikutsertaan kreator langsung aktif tanpa persetujuan UMKM.
   const lamaran = k.lamaranSaya
   const sayaKreatornya = lamaran?.status === 'disetujui'
   const kelayakan = k.kelayakanSaya
@@ -389,32 +405,12 @@ export default function DetailKampanye() {
                         </Link>
                       </Tekan>
                     </motion.div>
-                  ) : lamaran ? (
-                    <motion.div
-                      key="terkirim"
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: DUR.quick, ease: EASE.entrance }}
-                      className="mt-5 rounded-xl border border-success-border bg-success-soft px-4 py-4 text-center"
-                    >
-                      <CentangSukses size={26} className="mx-auto" />
-                      <p className="mt-2 font-semibold text-success">
-                        Anda Diundang
-                      </p>
-                      <p className="mt-1 text-xs text-ink-soft">
-                        Status saat ini: {statusLamaran(lamaran.status).label}. Anda akan menerima
-                        notifikasi begitu ada keputusan.
-                      </p>
-                      <Tekan className="mt-4 block">
-                        <Link to="/notifikasi" className="btn-outline w-full py-2.5">Lihat Notifikasi</Link>
-                      </Tekan>
-                    </motion.div>
                   ) : adalahKreator && !kelayakan?.bolehIkut ? (
                     <motion.div
                       key="kelayakan"
                       className="mt-5 rounded-xl border border-gold/40 bg-cream-100 px-4 py-4 text-sm"
                     >
-                      <p className="font-semibold text-navy">Lengkapi profil agar bisa menerima undangan kampanye</p>
+                      <p className="font-semibold text-navy">Lengkapi profil agar bisa bergabung</p>
                       {!kelayakan?.profilLengkap && (
                         <p className="mt-2 text-ink-soft">
                           Lengkapi nama, niche, lokasi, dan bio di <Link to="/profil" className="font-semibold text-navy underline">profilmu</Link>.
@@ -427,9 +423,20 @@ export default function DetailKampanye() {
                         </p>
                       )}
                     </motion.div>
+                  ) : adalahKreator && k.menerimaKreator ? (
+                    <div className="mt-5">
+                      <button type="button" onClick={ikutiKampanye} disabled={ikutMemuat} className="btn-primary w-full py-3 disabled:opacity-60">
+                        {ikutMemuat ? 'Bergabung…' : 'Ikuti Kampanye'}
+                      </button>
+                      {galatIkut && <p role="alert" className="mt-2 text-center text-sm text-danger">{galatIkut}</p>}
+                    </div>
+                  ) : !sudahMasuk && k.menerimaKreator ? (
+                    <Tekan className="mt-5 block">
+                      <Link to="/masuk" className="btn-primary w-full py-3">Masuk sebagai Kreator untuk Ikut</Link>
+                    </Tekan>
                   ) : k.menerimaKreator ? (
-                    <motion.p key="undangan" className="mt-5 rounded-xl bg-cream-100 px-4 py-4 text-center text-sm text-ink-soft">
-                      Kreator bergabung melalui undangan UMKM. Jika terpilih, undangan akan muncul di notifikasi.
+                    <motion.p key="bukan-kreator" className="mt-5 rounded-xl bg-cream-100 px-4 py-4 text-center text-sm text-ink-soft">
+                      Masuk sebagai kreator untuk mengikuti kampanye ini.
                     </motion.p>
                   ) : (
                     <motion.p key="tutup" className="mt-5 rounded-xl bg-cream-100 px-4 py-4 text-center text-sm text-ink-soft">
@@ -466,7 +473,7 @@ export default function DetailKampanye() {
                 <div className="mt-5 space-y-3 border-t border-black/5 pt-5">
                   <Tekan className="block">
                     <Link to={`/umkm/kampanye/${k.id}/kreator`} className="btn-primary w-full py-3">
-                      {k.jumlahKreator ? 'Kelola Kreator' : 'Pilih & Setujui Kreator'}
+                      {k.jumlahKreator ? 'Lihat Kreator' : 'Pantau Kreator'}
                     </Link>
                   </Tekan>
                   {(sudahJalan || k.status === 'selesai') && (

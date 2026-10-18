@@ -39,7 +39,7 @@ export default function DashboardUMKM() {
     )
   }
 
-  const { ringkasan, kampanye, lamaranPerluDitinjau } = data
+  const { ringkasan, kampanye } = data
   const berjalan = kampanye.filter((k) => k.status === 'berjalan')
 
   // Tenggat terdekat di antara kampanye yang masih berjalan.
@@ -66,32 +66,19 @@ export default function DashboardUMKM() {
             <AIPanel
               title="Langkah Berikutnya"
               ikon={Store}
-              action={lamaranPerluDitinjau > 0 ? 'Tinjau Undangan' : 'Lihat Kreator'}
-              to={
-                lamaranPerluDitinjau > 0 && kampanye.length
-                  ? `/umkm/kampanye/${
-                      kampanye.find((k) => k.status === 'berjalan')?.id ||
-                      kampanye[0].id
-                    }/kreator`
-                  : '/marketplace'
-              }
+              action="Lihat Kreator"
+              to={ringkasan.berjalanTanpaKreator > 0 && kampanye.length
+                ? `/umkm/kampanye/${kampanye.find((k) => k.status === 'berjalan' && !k.jumlahKreator)?.id || kampanye[0].id}/kreator`
+                : '/marketplace'}
             >
-              {lamaranPerluDitinjau > 0 ? (
-                <>
-                  Ada <b className="text-white">{lamaranPerluDitinjau} undangan kreator</b> yang
-                  menunggu keputusan Anda. Semakin cepat ditinjau, semakin cepat kampanye Anda
-                  mulai menghasilkan tayangan.
-                </>
-              ) : ringkasan.berjalanTanpaKreator > 0 ? (
+              {ringkasan.berjalanTanpaKreator > 0 ? (
                 <>
                   <b className="text-white">{ringkasan.berjalanTanpaKreator} kampanye</b> Anda sedang berjalan
-                  dan belum memiliki kreator. Anda bisa memilih lalu mengundang kreator
-                  secara langsung dari rekomendasi kreator.
+                  dan belum memiliki kreator. Kreator bisa bergabung langsung tanpa menunggu persetujuan Anda.
                 </>
               ) : (
                 <>
-                  Semua kampanye Anda sedang berjalan dengan kreator terpilih. Pantau hasilnya di
-                  laporan, atau buat kampanye baru untuk produk lain.
+                  Pantau kreator yang bergabung dan hasil kampanye Anda, atau buat kampanye baru untuk produk lain.
                 </>
               )}
             </AIPanel>

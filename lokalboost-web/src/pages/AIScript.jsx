@@ -127,7 +127,7 @@ export default function AIScript() {
                 <Link to="/marketplace" className="font-semibold text-navy hover:underline">
                   Cari kampanye
                 </Link>{' '}
-                lalu minta UMKM mengundang Anda ke kampanye.
+                lalu pilih kampanye yang cocok di marketplace dan bergabung langsung.
               </p>
             ) : (
               <select

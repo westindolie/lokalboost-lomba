@@ -133,6 +133,11 @@ export default function SetorDana() {
       setModerasi(periksa.moderasi)
       if (periksa.moderasi.status !== 'lolos') return
 
+      if (periksa.modeDemo && periksa.kampanye?.status === 'berjalan') {
+        setInfo('Kampanye aktif dengan dana simulasi. Tidak ada pembayaran sungguhan.')
+        return selesai(kampanyeId)
+      }
+
       // Reward produk saja: tidak ada uang yang ditagih, kampanye langsung terbit.
       if (produkSaja) {
         setTahap('Menerbitkan kampanye…')

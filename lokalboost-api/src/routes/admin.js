@@ -68,7 +68,7 @@ rutaAdmin.get(
         ),
         biayaPasangTarif: config.biayaPasang,
         dicairkanKeKreator: angka(
-          "SELECT COALESCE(SUM(nominal), 0) AS n FROM transaksi WHERE jenis = 'pencairan'",
+          "SELECT COALESCE(SUM(nominal), 0) AS n FROM transaksi WHERE jenis = 'pencairan' AND label NOT LIKE 'DEMO:%'",
         ),
         dikembalikanKeUmkm: angka(
           "SELECT COALESCE(SUM(nominal), 0) AS n FROM transaksi WHERE jenis = 'refund'",
@@ -552,7 +552,7 @@ rutaAdmin.get(
  * dalamnya menjawab pertanyaan yang selama ini tidak bisa dijawab siapa pun:
  * apakah aturan anti-fraud terlalu galak, dan apakah rekomendasi matchmaker
  * memang yang dipilih orang. Keduanya bersandar pada keputusan manusia yang
- * sudah tercatat (putusan sengketa dan persetujuan kreator), bukan pada
+ * sudah tercatat (putusan sengketa dan keputusan yang memerlukan moderator), bukan pada
  * penilaian sistem terhadap dirinya sendiri.
  */
 rutaAdmin.get(

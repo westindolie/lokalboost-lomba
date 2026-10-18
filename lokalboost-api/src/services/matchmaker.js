@@ -252,7 +252,7 @@ export function skorKecocokan(kampanye, kreator) {
 
 /**
  * Rekomendasikan kreator terbaik untuk sebuah kampanye.
- * Kreator yang sudah menerima undangan ditandai agar UMKM tidak mengundangnya lagi.
+ * Kreator yang sudah bergabung ditandai agar tidak muncul sebagai kandidat baru.
  */
 export function rekomendasiKreator(kampanyeId, { batas = 10 } = {}) {
   const kampanye = db.prepare('SELECT * FROM kampanye WHERE id = ?').get(kampanyeId)
@@ -267,8 +267,8 @@ export function rekomendasiKreator(kampanyeId, { batas = 10 } = {}) {
     )
     .all()
 
-  const sudahDiundang = new Set(
-    db.prepare("SELECT kreator_id FROM lamaran WHERE kampanye_id = ? AND (status = 'disetujui' OR (jenis = 'undangan' AND status = 'menunggu'))")
+  const sudahBergabung = new Set(
+    db.prepare("SELECT kreator_id FROM lamaran WHERE kampanye_id = ? AND status = 'disetujui'")
       .all(kampanyeId).map((r) => r.kreator_id),
   )
 
@@ -289,7 +289,7 @@ export function rekomendasiKreator(kampanyeId, { batas = 10 } = {}) {
         alasan: hasil.alasanUtama,
         semuaAlasan: hasil.alasan,
         rincian: hasil.rincian,
-        sudahDiundang: sudahDiundang.has(k.id),
+        sudahBergabung: sudahBergabung.has(k.id),
       }
     })
     .sort((a, b) => b.kecocokan - a.kecocokan)

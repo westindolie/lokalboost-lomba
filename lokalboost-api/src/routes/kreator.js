@@ -67,7 +67,7 @@ rutaKreator.get(
   }),
 )
 
-/** GET /api/kreator/saya/lamaran — riwayat lamaran & undangan. */
+/** GET /api/kreator/saya/lamaran — kampanye yang diikuti kreator. */
 rutaKreator.get(
   '/saya/lamaran',
   wajibPeran('kreator'),
@@ -76,7 +76,7 @@ rutaKreator.get(
       .prepare(
         `SELECT l.*, k.nama AS nama_kampanye, k.kategori, k.lokasi, k.tarif_per_view, k.target_views, k.status AS status_kampanye
          FROM lamaran l JOIN kampanye k ON k.id = l.kampanye_id
-         WHERE l.kreator_id = ? AND (l.jenis = 'undangan' OR l.status = 'disetujui') ORDER BY l.dibuat_pada DESC`,
+         WHERE l.kreator_id = ? AND l.status = 'disetujui' ORDER BY l.dibuat_pada DESC`,
       )
       .all(req.pengguna.id)
 

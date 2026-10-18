@@ -18,7 +18,7 @@ rutaDompet.get(
   '/',
   wajibLogin,
   bungkus((req, res) => {
-    res.json({ dompet: ringkasDompet(req.pengguna.id), ambang2fa: AMBANG_2FA })
+    res.json({ dompet: ringkasDompet(req.pengguna.id), ambang2fa: AMBANG_2FA, modeDemo: config.modeDemo })
   }),
 )
 
@@ -58,6 +58,7 @@ rutaDompet.post(
   '/tarik',
   wajibLogin,
   bungkus((req, res) => {
+    if (config.modeDemo) throw galat400('Saldo mode demo tidak dapat ditarik sebagai uang sungguhan.')
     const hasil = tarikDana({
       penggunaId: req.pengguna.id,
       jumlah: req.body?.jumlah,

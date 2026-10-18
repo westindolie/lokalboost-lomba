@@ -489,7 +489,7 @@ export default function Admin() {
  * pertanyaan yang tidak bisa dijawab sistem tentang dirinya sendiri: apakah
  * aturan anti-fraud terlalu galak, dan apakah rekomendasi matchmaker memang
  * yang dipilih orang. Sumbernya keputusan manusia yang sudah tercatat —
- * putusan sengketa dan persetujuan kreator.
+ * putusan sengketa dan keputusan manusia yang tercatat secara historis.
  *
  * Angka nol di sini bukan kegagalan, melainkan keadaan wajar di awal:
  * belum ada keputusan yang bisa dipelajari. Layar harus mengatakannya
@@ -588,7 +588,7 @@ function KetepatanAI({ keadaan }) {
 
           {!mm.jumlahKeputusan ? (
             <p className="mt-3 text-sm text-ink-soft">
-              {mm.catatan} Angkanya mulai terisi begitu UMKM menyetujui atau mengundang kreator.
+              {mm.catatan} Pengukuran ini hanya terisi dari keputusan kreator yang tercatat saat sistem memakai rekomendasi.
             </p>
           ) : (
             <>

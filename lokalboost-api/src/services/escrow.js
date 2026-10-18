@@ -48,7 +48,7 @@ const paguKampanye = (kampanye, escrow) =>
  * Midtrans menandai tagihan lunas DAN menyetor escrow, keduanya atau tidak
  * sama sekali). Pemanggil biasa memakai `setorDana`.
  */
-export function setorDanaInti({ kampanyeId, umkmId, jumlah, metode = 'transfer_bank' }) {
+export function setorDanaInti({ kampanyeId, umkmId, jumlah, metode = 'transfer_bank', demo = false }) {
   const kampanye = ambilKampanye(kampanyeId)
   if (!kampanye) throw galat404('Kampanye tidak ditemukan.')
   if (kampanye.umkm_id !== umkmId) throw galat409('Kampanye ini bukan milik Anda.')
@@ -72,7 +72,7 @@ export function setorDanaInti({ kampanyeId, umkmId, jumlah, metode = 'transfer_b
   ).run(kampanyeId, nominal, sekarang())
 
   // Semua kampanye yang dananya aman berstatus berjalan. Kreator bergabung
-  // lewat undangan UMKM, selama masih ada dana atau kuota reward.
+  // lewat keikutsertaan langsung kreator, selama masih ada dana atau kuota reward.
   db.prepare("UPDATE kampanye SET status = 'berjalan', diterbitkan_pada = COALESCE(diterbitkan_pada, ?) WHERE id = ?")
     .run(sekarang(), kampanyeId)
   // Reward kombinasi: kuota produk dipotong dari stok bersamaan dengan dana masuk.
@@ -84,13 +84,15 @@ export function setorDanaInti({ kampanyeId, umkmId, jumlah, metode = 'transfer_b
     jenis: 'setor',
     arah: 'keluar',
     nominal,
-    label: `Setor dana Rekber — ${kampanye.nama}`,
+    label: `${demo ? 'DEMO: ' : ''}Setor dana Rekber — ${kampanye.nama}`,
   })
 
   kirimNotifikasi(umkmId, {
     jenis: 'dana',
     judul: 'Dana kampanye aman di Rekber',
-    isi: `${rupiah(nominal)} tersimpan di rekening bersama untuk "${kampanye.nama}". Dana hanya cair setelah tayangan terverifikasi.`,
+    isi: demo
+      ? `${rupiah(nominal)} dana simulasi tersedia untuk kampanye "${kampanye.nama}". Tidak ada pembayaran sungguhan.`
+      : `${rupiah(nominal)} tersimpan di rekening bersama untuk "${kampanye.nama}". Dana hanya cair setelah tayangan terverifikasi.`,
     tautan: `/umkm/kampanye/${kampanyeId}/laporan`,
   })
 

@@ -13,11 +13,12 @@ import {
   galat409,
   wajibAda,
 } from '../lib/util.js'
-import { catatPilihan, rekomendasiKreator, skorKecocokan } from '../services/matchmaker.js'
-import { prosesPembayaran, selesaikanKampanye, setorDana } from '../services/escrow.js'
+import { rekomendasiKreator, skorKecocokan } from '../services/matchmaker.js'
+import { prosesPembayaran, selesaikanKampanye, setorDana, setorDanaInti } from '../services/escrow.js'
 import { deteksiAnomali, laporanAntiFraud } from '../services/antifraud.js'
 import { statistikKampanye } from '../services/laporan.js'
 import { kirimNotifikasi } from '../services/notifikasi.js'
+import { simulasiPencairanKampanye } from '../services/demo.js'
 import { ringkasLaporan } from '../services/ai.js'
 import { midtransAktif } from '../services/midtrans.js'
 import { config } from '../config.js'
@@ -68,7 +69,13 @@ function kelayakanKreatorIkut(kreatorId) {
     )
     .get(kreatorId)
   if (!profil) {
-    return { bolehIkut: false, profilLengkap: false, akunTerverifikasi: false, platformTerverifikasi: [] }
+    return {
+      bolehIkut: config.modeDemo,
+      profilLengkap: config.modeDemo,
+      akunTerverifikasi: config.modeDemo,
+      platformTerverifikasi: [],
+      simulasi: config.modeDemo,
+    }
   }
 
   const profilLengkap = Boolean(profil.nama?.trim() && profil.niche?.trim() && profil.lokasi?.trim() && profil.bio?.trim())
@@ -78,11 +85,18 @@ function kelayakanKreatorIkut(kreatorId) {
     .map((baris) => baris.platform)
   const akunTerverifikasi = platformTerverifikasi.length > 0
 
-  return { bolehIkut: profilLengkap && akunTerverifikasi, profilLengkap, akunTerverifikasi, platformTerverifikasi }
+  return {
+    bolehIkut: config.modeDemo || (profilLengkap && akunTerverifikasi),
+    profilLengkap: config.modeDemo || profilLengkap,
+    akunTerverifikasi: config.modeDemo || akunTerverifikasi,
+    platformTerverifikasi,
+    simulasi: config.modeDemo,
+  }
 }
 
 function pastikanLayakKreatorIkut(kreatorId) {
   const kelayakan = kelayakanKreatorIkut(kreatorId)
+  if (config.modeDemo) return kelayakan
   if (!kelayakan.profilLengkap) {
     throw galat409('Lengkapi nama, niche, lokasi, dan bio profil kreator sebelum ikut kampanye.')
   }
@@ -258,7 +272,7 @@ rutaKampanye.get(
       nilai.push(...status.split(','))
     } else if (!umkmId) {
       // Marketplace publik hanya menampilkan kampanye yang dananya sudah
-      // aman di Rekber — kreator tidak boleh melamar kampanye tanpa dana.
+      // aman di Rekber — kreator tidak boleh bergabung sebelum dana tersedia.
       syarat.push("status = 'berjalan'")
     }
 
@@ -332,7 +346,7 @@ rutaKampanye.post(
     // Reward produk saja tidak menyetor uang ke Rekber: anggaran tunai 0.
     const anggaran =
       r.model === 'produk' ? 0 : b.anggaran ? angkaPositif(b.anggaran, 'Anggaran') : Math.ceil((r.targetViews * r.cpm) / 1000)
-    pastikanAnggaranCukup(r, anggaran)
+    if (!config.modeDemo) pastikanAnggaranCukup(r, anggaran)
     const produk = rapikanProdukReward(b.produkReward, req.pengguna.id, r.model)
 
     // Slug unik supaya URL kampanye enak dibaca ("/kampanye/bakso-aci").
@@ -450,10 +464,12 @@ rutaKampanye.patch(
     const r = rapikanPengaturanReward(b, k)
     const anggaran = r.model === 'produk' ? 0 : b.anggaran ? angkaPositif(b.anggaran, 'Anggaran') : k.anggaran
 
-    try {
-      pastikanAnggaranCukup(r, anggaran)
-    } catch {
-      throw galat400('Anggaran tidak cukup untuk target dan tarif yang baru.')
+    if (!config.modeDemo) {
+      try {
+        pastikanAnggaranCukup(r, anggaran)
+      } catch {
+        throw galat400('Anggaran tidak cukup untuk target dan tarif yang baru.')
+      }
     }
     const produk =
       b.produkReward !== undefined || r.model !== k.model_reward
@@ -610,7 +626,29 @@ rutaKampanye.post(
   bungkus(async (req, res) => {
     const k = kampanyeBelumBayar(req)
     const moderasi = await periksaDanSimpan(k)
-    res.json({ moderasi })
+    let kampanye = null
+    if (config.modeDemo && moderasi.status === 'lolos' && k.model_reward === 'tunai') {
+      const terbaru = ambil(k.id)
+      transaksional(() => setorDanaInti({
+        kampanyeId: k.id,
+        umkmId: req.pengguna.id,
+        jumlah: terbaru.anggaran,
+        metode: 'demo',
+        demo: true,
+      }))()
+      kampanye = bentukKampanye(ambil(k.id))
+    }
+    res.json({ moderasi, modeDemo: config.modeDemo, kampanye })
+  }),
+)
+
+/** POST /api/kampanye/:id/demo-selesaikan — pencairan saldo simulasi tanpa views. */
+rutaKampanye.post(
+  '/:id/demo-selesaikan',
+  wajibPeran('kreator'),
+  bungkus((req, res) => {
+    const hasil = simulasiPencairanKampanye(req.params.id, req.pengguna.id)
+    res.json(hasil)
   }),
 )
 
@@ -675,7 +713,7 @@ rutaKampanye.get(
       hasil.kelayakanSaya = kelayakanKreatorIkut(req.pengguna.id)
       hasil.lamaranSaya =
         db
-          .prepare("SELECT status, jenis, pesan, dibuat_pada FROM lamaran WHERE kampanye_id = ? AND kreator_id = ? AND (jenis = 'undangan' OR status = 'disetujui')")
+          .prepare("SELECT status, jenis, pesan, dibuat_pada FROM lamaran WHERE kampanye_id = ? AND kreator_id = ? AND status = 'disetujui'")
           .get(k.id, req.pengguna.id) || null
       hasil.rewardSaya = statusReward(k.id, req.pengguna.id)
     }
@@ -687,56 +725,41 @@ rutaKampanye.get(
 //  Lamaran & pemilihan kreator
 // =====================================================================
 
-/** Jalur pengajuan diri ditutup. Kreator bergabung melalui undangan UMKM. */
+/** Kreator bergabung langsung. UMKM tidak perlu mengundang atau menyetujui. */
 rutaKampanye.post(
   '/:id/lamaran',
   wajibPeran('kreator'),
-  bungkus(() => {
-    throw galat409('Kreator tidak mengajukan diri. UMKM memilih dan mengundang kreator ke kampanye.')
-  }),
-)
-
-/** POST /api/kampanye/:id/undang — UMKM mengundang kreator secara langsung. */
-rutaKampanye.post(
-  '/:id/undang',
-  wajibPeran('umkm'),
   bungkus((req, res) => {
     const k = ambil(req.params.id)
     if (!k) throw galat404('Kampanye tidak ditemukan.')
-    if (k.umkm_id !== req.pengguna.id) throw galat403()
-    if (!sisaKampanye(k).menerima) throw galat409('Kampanye ini sudah melewati tenggat atau tidak memiliki reward tersisa.')
+    if (!sisaKampanye(k).menerima) throw galat409('Kampanye ini tidak menerima kreator baru atau reward-nya sudah habis.')
+    pastikanLayakKreatorIkut(req.pengguna.id)
+    if (adalahPeserta(k.id, req.pengguna.id)) throw galat409('Anda sudah bergabung di kampanye ini.')
 
-    const { kreatorId } = wajibAda(req.body, ['kreatorId'])
-    const kreator = db.prepare("SELECT * FROM pengguna WHERE id = ? AND peran = 'kreator'").get(kreatorId)
-    if (!kreator) throw galat404('Kreator tidak ditemukan.')
-    pastikanLayakKreatorIkut(kreatorId)
-
-    // Mengundang ulang peserta akan mengembalikan lamarannya ke 'menunggu' dan
-    // memutus buku besar reward-nya dari kampanye.
-    if (adalahPeserta(k.id, kreatorId)) throw galat409('Kreator ini sudah bergabung di kampanye.')
-
-    const profil = db.prepare('SELECT * FROM profil_kreator WHERE pengguna_id = ?').get(kreatorId)
+    const profil = db.prepare('SELECT * FROM profil_kreator WHERE pengguna_id = ?').get(req.pengguna.id)
     const skor = profil ? skorKecocokan(k, profil).skor : null
+    transaksional(() => {
+      db.prepare(
+        `INSERT INTO lamaran (kampanye_id, kreator_id, jenis, status, skor_kecocokan)
+         VALUES (?, ?, 'lamaran', 'disetujui', ?)
+         ON CONFLICT(kampanye_id, kreator_id) DO UPDATE SET
+           jenis = 'lamaran', status = 'disetujui', skor_kecocokan = excluded.skor_kecocokan`,
+      ).run(k.id, req.pengguna.id, skor)
+      const statusBaru = k.status === 'terbuka' || k.status === 'mencari_kreator' ? 'berjalan' : k.status
+      db.prepare('UPDATE kampanye SET kreator_id = COALESCE(kreator_id, ?), status = ? WHERE id = ?').run(
+        req.pengguna.id,
+        statusBaru,
+        k.id,
+      )
+    })()
 
-    db.prepare(
-      `INSERT INTO lamaran (kampanye_id, kreator_id, jenis, pesan, skor_kecocokan)
-       VALUES (?, ?, 'undangan', ?, ?)
-       ON CONFLICT(kampanye_id, kreator_id) DO UPDATE SET
-         jenis = 'undangan', pesan = excluded.pesan, status = 'menunggu'`,
-    ).run(k.id, kreatorId, req.body?.pesan || null, skor)
-
-    // Undangan langsung adalah sinyal terkuat: UMKM memilih kreator ini
-    // tanpa menunggu siapa pun melamar.
-    catatPilihan(k.id, kreatorId, 'diundang')
-
-    kirimNotifikasi(kreatorId, {
-      jenis: 'approval',
-      judul: 'Anda diundang ke sebuah kampanye',
-      isi: `${bentukKampanye(k, { ringkas: true }).umkm} mengundang Anda untuk "${k.nama}".`,
-      tautan: `/kampanye/${k.id}`,
+    kirimNotifikasi(k.umkm_id, {
+      jenis: 'kampanye',
+      judul: 'Kreator bergabung di kampanye Anda',
+      isi: `${req.pengguna.nama} bergabung di kampanye "${k.nama}" dan bisa mulai mengirim video.`,
+      tautan: `/umkm/kampanye/${k.id}/kreator`,
     })
-
-    res.status(201).json({ pesan: 'Undangan terkirim ke kreator.', kecocokan: skor })
+    res.status(201).json({ pesan: 'Anda berhasil bergabung di kampanye.', kampanye: bentukKampanye(ambil(k.id)) })
   }),
 )
 
@@ -752,7 +775,7 @@ rutaKampanye.get(
     // Kreator hanya boleh melihat lamarannya sendiri — daftar pesaing adalah
     // urusan pemilik usaha, bukan konsumsi publik.
     const filterKreator = req.pengguna.peran === 'kreator' ? 'AND l.kreator_id = ?' : ''
-    const filterUndangan = ['umkm', 'kreator'].includes(req.pengguna.peran) ? "AND (l.jenis = 'undangan' OR l.status = 'disetujui')" : ''
+    const filterPeserta = "AND l.status = 'disetujui'"
     const argumen = req.pengguna.peran === 'kreator' ? [k.id, req.pengguna.id] : [k.id]
 
     const daftar = db
@@ -761,7 +784,7 @@ rutaKampanye.get(
          FROM lamaran l
          JOIN pengguna p ON p.id = l.kreator_id
          LEFT JOIN profil_kreator pk ON pk.pengguna_id = l.kreator_id
-         WHERE l.kampanye_id = ? ${filterKreator} ${filterUndangan}
+         WHERE l.kampanye_id = ? ${filterKreator} ${filterPeserta}
          ORDER BY l.skor_kecocokan DESC, l.id`,
       )
       .all(...argumen)
@@ -785,87 +808,6 @@ rutaKampanye.get(
         dibuatPada: l.dibuat_pada,
       })),
     })
-  }),
-)
-
-/** POST /api/kampanye/:id/lamaran/:lamaranId/setujui */
-rutaKampanye.post(
-  '/:id/lamaran/:lamaranId/setujui',
-  wajibPeran('umkm'),
-  bungkus((req, res) => {
-    const k = ambil(req.params.id)
-    if (!k) throw galat404('Kampanye tidak ditemukan.')
-    if (k.umkm_id !== req.pengguna.id) throw galat403()
-
-    const lamaran = db
-      .prepare('SELECT * FROM lamaran WHERE id = ? AND kampanye_id = ?')
-      .get(req.params.lamaranId, k.id)
-    if (!lamaran) throw galat404('Lamaran tidak ditemukan.')
-    if (lamaran.jenis !== 'undangan') throw galat409('Hanya undangan UMKM yang bisa diputuskan.')
-    if (lamaran.status === 'disetujui') throw galat409('Kreator ini sudah bergabung di kampanye.')
-    pastikanLayakKreatorIkut(lamaran.kreator_id)
-    // Kampanye yang sudah terbit hanya menerima kreator selama anggarannya ada.
-    if (['berjalan', 'selesai'].includes(k.status) && !sisaKampanye(k).menerima) {
-      throw galat409('Anggaran kampanye sudah habis. Kreator baru tidak bisa dibayar.')
-    }
-
-    transaksional(() => {
-      db.prepare("UPDATE lamaran SET status = 'disetujui' WHERE id = ?").run(lamaran.id)
-      // Satu kampanye boleh banyak kreator: pelamar lain TIDAK ditolak otomatis.
-      // kampanye.kreator_id tetap diisi kreator pertama untuk data lama.
-      const statusBaru = k.status === 'terbuka' || k.status === 'mencari_kreator' ? 'berjalan' : k.status
-      db.prepare('UPDATE kampanye SET kreator_id = COALESCE(kreator_id, ?), status = ? WHERE id = ?').run(
-        lamaran.kreator_id,
-        statusBaru,
-        k.id,
-      )
-    })()
-
-    // Peringkat dicatat sebelum notifikasi, selagi keadaan kandidat masih
-    // sama persis dengan yang dilihat UMKM saat memutuskan.
-    catatPilihan(k.id, lamaran.kreator_id, 'disetujui')
-
-    kirimNotifikasi(lamaran.kreator_id, {
-      jenis: 'approval',
-      judul: 'Lamaran Anda disetujui',
-      isi: `Anda terpilih untuk kampanye "${k.nama}". Buat kontennya, unggah di akun Anda, lalu setor tautan videonya.`,
-      tautan: `/kampanye/${k.id}`,
-      email: true,
-    })
-
-    res.json({ pesan: 'Kreator disetujui dan bergabung di kampanye.', kampanye: bentukKampanye(ambil(k.id)) })
-  }),
-)
-
-/** POST /api/kampanye/:id/lamaran/:lamaranId/tolak */
-rutaKampanye.post(
-  '/:id/lamaran/:lamaranId/tolak',
-  wajibPeran('umkm'),
-  bungkus((req, res) => {
-    const k = ambil(req.params.id)
-    if (!k) throw galat404('Kampanye tidak ditemukan.')
-    if (k.umkm_id !== req.pengguna.id) throw galat403()
-
-    const lamaran = db
-      .prepare('SELECT * FROM lamaran WHERE id = ? AND kampanye_id = ?')
-      .get(req.params.lamaranId, k.id)
-    if (!lamaran) throw galat404('Lamaran tidak ditemukan.')
-    if (lamaran.jenis !== 'undangan') throw galat409('Hanya undangan UMKM yang bisa diputuskan.')
-    // Peserta yang sudah bekerja tidak bisa "ditolak": views dan reward-nya
-    // tercatat di baris ini. Keberatan atas kontennya lewat Pusat Sengketa.
-    if (lamaran.status === 'disetujui') {
-      throw galat409('Kreator ini sudah bergabung. Ajukan sengketa bila ada masalah dengan kontennya.')
-    }
-
-    db.prepare("UPDATE lamaran SET status = 'ditolak' WHERE id = ?").run(lamaran.id)
-    kirimNotifikasi(lamaran.kreator_id, {
-      jenis: 'approval',
-      judul: 'Lamaran belum berjodoh',
-      isi: `Pemilik usaha memilih kreator lain untuk "${k.nama}". Masih banyak kampanye lain yang cocok untukmu.`,
-      tautan: '/marketplace',
-      email: true,
-    })
-    res.json({ pesan: 'Lamaran ditolak.' })
   }),
 )
 

@@ -228,7 +228,7 @@ export default function SetorVideo() {
           <EmptyState
             icon={Play}
             title="Belum ada kampanye yang menerima Anda"
-            subtitle="Tautan video bisa disetor setelah Anda menerima undangan dari pemilik usaha."
+            subtitle="Ikuti kampanye dari marketplace terlebih dahulu, lalu setor tautan videomu di sini."
             action="Cari Kampanye"
             to="/marketplace"
           />

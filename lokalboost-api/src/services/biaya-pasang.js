@@ -25,7 +25,7 @@ import { kirimNotifikasi } from './notifikasi.js'
  * simulasi ditutup.
  */
 
-export const biayaPasangAktif = () => config.biayaPasang > 0
+export const biayaPasangAktif = () => !config.modeDemo && config.biayaPasang > 0
 
 const KUERI_TIKET = `SELECT * FROM pembayaran
   WHERE umkm_id = ? AND jenis = 'biaya_pasang' AND status = 'lunas' AND kampanye_id IS NULL

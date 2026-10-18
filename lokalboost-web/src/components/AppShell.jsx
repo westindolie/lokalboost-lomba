@@ -31,7 +31,7 @@ const NAV = {
      diisi "Testimoni" — halaman pemasaran untuk calon pengguna — sementara
      kreator mendapat "Dompet" yang fungsional di posisi yang sama. */
   // Sidebar kreator dan UMKM dihapus (18 Okt 2026): semua pilihannya pindah ke
-  // sini. Kreator dipilih dan diundang langsung oleh UMKM.
+  // sini. Kreator bergabung sendiri ke kampanye yang masih menerima peserta.
   // Tujuan "Laporan Hasil" diisi belakangan (kampanye mana yang relevan baru
   // diketahui setelah datanya dimuat), lihat useLinkNav.
   umkm: [
@@ -465,7 +465,7 @@ function PitaModeDemo() {
   if (!aktif) return null
   return (
     <p className="bg-navy px-4 py-1.5 text-center text-xs text-white/85">
-      Mode demo: data contoh bisa kembali seperti semula sewaktu-waktu. Coba akun demo di halaman Masuk.
+      MODE DEMO: pembayaran dan saldo hanya simulasi, tidak ada uang sungguhan dan saldo tidak bisa ditarik. Data dapat direset sewaktu-waktu.
     </p>
   )
 }

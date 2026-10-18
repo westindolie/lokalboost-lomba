@@ -120,7 +120,7 @@ rutaVideo.post(
     const kampanye = db.prepare('SELECT * FROM kampanye WHERE id = ?').get(b.kampanyeId)
     if (!kampanye) throw galat404('Kampanye tidak ditemukan.')
     if (!adalahPeserta(kampanye.id, req.pengguna.id)) {
-      throw galat403('Anda belum disetujui sebagai kreator kampanye ini.')
+      throw galat403('Anda belum bergabung di kampanye ini.')
     }
     if (kampanye.status === 'selesai') throw galat409('Kampanye ini sudah selesai.')
 
@@ -166,8 +166,9 @@ rutaVideo.post(
     const b = wajibAda(req.body, ['kampanyeId', 'url'])
     const judul = b.judul ? pastikanTeks(b.judul, 'Judul video', { min: 3, maks: 120 }) : null
     const v = await setorTautanVideo({ kampanyeId: b.kampanyeId, kreator: req.pengguna, url: b.url, judul })
-    const pesan =
-      v.status === 'tayang'
+    const pesan = config.modeDemo
+      ? 'Tautan dicatat untuk demo. Akun, isi video, dan views tidak diverifikasi; saldo yang diterima nanti hanya simulasi.'
+      : v.status === 'tayang'
         ? 'Video sesuai kampanye. Views-nya mulai dihitung dari sekarang.'
         : v.status === 'diproses'
           ? 'Video tersimpan. AI belum yakin videonya sesuai, pemilik usaha akan meninjau.'
