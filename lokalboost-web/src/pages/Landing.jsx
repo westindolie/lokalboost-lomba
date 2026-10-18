@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom'
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'motion/react'
 import AppShell from '../components/AppShell.jsx'
 import { useSesi } from '../sesi.jsx'
@@ -72,9 +73,28 @@ function DaftarLangkah({ items }) {
 }
 
 export default function Landing() {
-  const { sudahMasuk, profil } = useSesi()
+  const { sudahMasuk, profil, masuk } = useSesi()
+  const navigate = useNavigate()
+  const [demoMemuat, setDemoMemuat] = useState('')
+  const [demoGalat, setDemoGalat] = useState('')
   const { data: statistik } = useApi(() => api.statistikPublik(), [])
   const angka = angkaDari(statistik)
+
+  const masukDemo = async (peran) => {
+    const akun = peran === 'umkm'
+      ? { identitas: 'busari@warungsunda.id', tujuan: '/umkm' }
+      : { identitas: 'rafi@kreator.id', tujuan: '/kreator' }
+    setDemoMemuat(peran)
+    setDemoGalat('')
+    try {
+      await masuk(akun.identitas, 'lokalboost123')
+      navigate(akun.tujuan)
+    } catch (err) {
+      setDemoGalat(err.message)
+    } finally {
+      setDemoMemuat('')
+    }
+  }
 
   return (
     // Tanpa `variant`: halaman depan pun mengikuti sesi, sehingga pengguna
@@ -149,6 +169,33 @@ export default function Landing() {
               </>
             )}
           </motion.div>
+
+          {!sudahMasuk && (
+            <motion.div variants={fadeUp} className="mx-auto mt-4 max-w-lg lg:mx-0">
+              <p className="mb-2 text-center text-xs font-semibold uppercase tracking-wide text-ink-soft lg:text-left">
+                Coba layanan langsung tanpa isi formulir masuk
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  disabled={Boolean(demoMemuat)}
+                  onClick={() => masukDemo('umkm')}
+                  className="btn-outline justify-center px-4 py-2.5 text-sm disabled:opacity-60"
+                >
+                  <Store size={17} /> {demoMemuat === 'umkm' ? 'Membuka…' : 'Masuk sebagai UMKM'}
+                </button>
+                <button
+                  type="button"
+                  disabled={Boolean(demoMemuat)}
+                  onClick={() => masukDemo('kreator')}
+                  className="btn-outline justify-center px-4 py-2.5 text-sm disabled:opacity-60"
+                >
+                  <Video size={17} /> {demoMemuat === 'kreator' ? 'Membuka…' : 'Masuk sebagai Kreator'}
+                </button>
+              </div>
+              {demoGalat && <p role="alert" className="mt-2 text-center text-sm text-red-600 lg:text-left">{demoGalat}</p>}
+            </motion.div>
+          )}
 
           <motion.div
             variants={fadeUp}
