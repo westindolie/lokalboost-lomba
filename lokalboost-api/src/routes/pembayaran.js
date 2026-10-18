@@ -65,6 +65,7 @@ rutaPembayaran.post(
 rutaPembayaran.get('/konfigurasi', (_req, res) => {
   res.json({
     aktif: midtransAktif(),
+    modeDemo: config.modeDemo,
     produksi: config.midtrans.produksi,
     clientKey: midtransAktif() ? config.midtrans.clientKey : null,
     snapJs: midtransAktif() ? alamatSnapJs() : null,

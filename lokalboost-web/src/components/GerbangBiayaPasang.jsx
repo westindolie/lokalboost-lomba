@@ -37,13 +37,16 @@ export default function GerbangBiayaPasang({ status, konfigurasi, onLunas }) {
   const [tagihan, setTagihan] = useState(status.menunggu || null)
 
   const pakaiMidtrans = Boolean(status.midtrans && konfigurasi?.aktif)
+  // Mode demo: simulasi tersedia walau Midtrans aktif, supaya presentasi tidak
+  // bergantung pada popup sandbox. Tanpa Midtrans, simulasi satu-satunya jalan.
+  const adaSimulasi = !pakaiMidtrans || Boolean(status.modeDemo)
 
-  const bayar = async () => {
+  const bayar = async (simulasi = false) => {
     setGalat('')
     setInfo('')
     setSibuk(true)
     try {
-      if (pakaiMidtrans) {
+      if (pakaiMidtrans && !simulasi) {
         const hasil = await bayarBiayaPasangDenganSnap({ konfigurasi, metode })
         setTagihan(hasil.tagihan)
         if (hasil.tagihan.status === 'lunas') return onLunas()
@@ -170,7 +173,12 @@ export default function GerbangBiayaPasang({ status, konfigurasi, onLunas }) {
             <Link to="/umkm" className="btn-outline w-full py-3.5">← Batal</Link>
           </Tekan>
           <Tekan className="flex-[2]">
-            <button type="button" onClick={bayar} disabled={sibuk} className="btn-primary w-full py-3.5 disabled:opacity-60">
+            <button
+              type="button"
+              onClick={() => bayar(!pakaiMidtrans)}
+              disabled={sibuk}
+              className="btn-primary w-full py-3.5 disabled:opacity-60"
+            >
               {sibuk ? (
                 'Memproses…'
               ) : (
@@ -182,6 +190,18 @@ export default function GerbangBiayaPasang({ status, konfigurasi, onLunas }) {
             </button>
           </Tekan>
         </div>
+        {pakaiMidtrans && adaSimulasi && (
+          <Tekan className="mt-3 block">
+            <button
+              type="button"
+              onClick={() => bayar(true)}
+              disabled={sibuk}
+              className="btn-outline w-full py-3 disabled:opacity-60"
+            >
+              Simulasi Demo: bayar {rupiah(status.biaya)} tanpa Midtrans
+            </button>
+          </Tekan>
+        )}
         <p className="field-help text-center">
           Setelah lunas, formulir kampanye langsung terbuka.
         </p>

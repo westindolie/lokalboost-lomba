@@ -30,6 +30,7 @@ import {
   bacaModerasi,
   pastikanLolosModerasi,
   periksaDanSimpan,
+  periksaIsiKampanye,
   setelUlangModerasi,
 } from '../services/moderasi-kampanye.js'
 import { batalkanTagihan } from '../services/midtrans.js'
@@ -541,7 +542,9 @@ rutaKampanye.post(
   '/:id/setor',
   wajibPeran('umkm'),
   bungkus(async (req, res) => {
-    if (midtransAktif()) {
+    // Mode demo (presentasi, tanpa uang sungguhan) boleh menyimulasikan setoran
+    // walau Midtrans aktif; di luar itu jalur ini ditutup.
+    if (midtransAktif() && !config.modeDemo) {
       throw galat409('Setor dana memakai pembayaran Midtrans. Buat tagihan lewat POST /api/pembayaran/tagihan.')
     }
     const k = ambil(req.params.id)
@@ -554,6 +557,7 @@ rutaKampanye.post(
       umkmId: req.pengguna.id,
       jumlah: req.body?.jumlah,
       metode: req.body?.metode,
+      demo: config.modeDemo,
     })
     res.json({
       pesan: 'Dana aman di Rekber. Kampanye Anda sudah tayang di marketplace.',
@@ -608,6 +612,35 @@ function kampanyeBelumBayar(req) {
 }
 
 /**
+ * POST /api/kampanye/periksa-isi  Body: { nama, deskripsi, brief[], referensi[] }
+ * Periksa isian kampanye SAAT DIISI, sebelum disimpan atau dibayar. Dipanggil
+ * tombol "Lanjut" di langkah 1: isi yang menjelekkan usaha lain ditolak di
+ * sini, jadi tidak pernah sampai ke langkah bayar. Tidak menyimpan apa pun;
+ * gerbang di tagihan Midtrans dan setor dana tetap berlaku sebagai lapis kedua.
+ */
+rutaKampanye.post(
+  '/periksa-isi',
+  wajibPeran('umkm'),
+  batasLaju({
+    maks: 15,
+    detik: 60,
+    kunci: (req) => req.pengguna?.id && `periksa-isi:${req.pengguna.id}`,
+    pesan: 'Terlalu banyak pemeriksaan. Tunggu sebentar lalu coba lagi.',
+  }),
+  bungkus(async (req, res) => {
+    const b = { ...(req.body || {}) }
+    rapikanIsianKampanye(b)
+    const referensi = (Array.isArray(b.referensi) ? b.referensi : []).slice(0, 3)
+    const moderasi = await periksaIsiKampanye(
+      { nama: b.nama, deskripsi: b.deskripsi },
+      Array.isArray(b.brief) ? b.brief : [],
+      referensi.map((r) => ({ judul: String(r?.judul || ''), penulis: String(r?.penulis || '') })),
+    )
+    res.json({ moderasi })
+  }),
+)
+
+/**
  * POST /api/kampanye/:id/periksa
  * Periksa apakah kampanye menjelekkan usaha lain, sebelum UMKM membayar.
  * Hasil disimpan; memanggil lagi tanpa mengubah isi mengembalikan hasil yang
@@ -625,19 +658,9 @@ rutaKampanye.post(
   bungkus(async (req, res) => {
     const k = kampanyeBelumBayar(req)
     const moderasi = await periksaDanSimpan(k)
-    let kampanye = null
-    if (config.modeDemo && moderasi.status === 'lolos' && k.model_reward === 'tunai') {
-      const terbaru = ambil(k.id)
-      transaksional(() => setorDanaInti({
-        kampanyeId: k.id,
-        umkmId: req.pengguna.id,
-        jumlah: terbaru.anggaran,
-        metode: 'demo',
-        demo: true,
-      }))()
-      kampanye = bentukKampanye(ambil(k.id))
-    }
-    res.json({ moderasi, modeDemo: config.modeDemo, kampanye })
+    // Mode demo TIDAK lagi mendanai di sini: UMKM tetap melalui layar bayar
+    // (Midtrans sandbox atau tombol simulasi) setelah lolos pemeriksaan.
+    res.json({ moderasi, modeDemo: config.modeDemo })
   }),
 )
 

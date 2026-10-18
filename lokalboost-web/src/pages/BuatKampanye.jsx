@@ -12,6 +12,7 @@ import { useDraf } from '../draf.jsx'
 import { Sparkles, ArrowRight, Image, Check } from '../components/icons.jsx'
 import ReferensiKonten from '../components/ReferensiKonten.jsx'
 import GerbangBiayaPasang from '../components/GerbangBiayaPasang.jsx'
+import PemeriksaanEtika from '../components/PemeriksaanEtika.jsx'
 import { MemuatBlok } from '../components/Muat.jsx'
 import { api, useApi } from '../api.js'
 import { rupiah } from '../format.js'
@@ -56,6 +57,8 @@ export default function BuatKampanye() {
   const [fotoSibuk, setFotoSibuk] = useState(false)
   const [galatFoto, setGalatFoto] = useState('')
   const pemilihFoto = useRef(null)
+  const [memeriksa, setMemeriksa] = useState(false)
+  const [moderasi, setModerasi] = useState(null)
 
   // Biaya pasang dibayar sebelum formulir terbuka. Kampanye yang sudah
   // tersimpan (kembali dari langkah 3 untuk menyunting) tidak ditagih lagi.
@@ -93,7 +96,7 @@ export default function BuatKampanye() {
   // Divalidasi di sini supaya pengguna tidak sampai ke halaman pembayaran
   // dengan kampanye yang pasti ditolak API. Aturannya sama dengan
   // rapikanIsianKampanye() di routes/kampanye.js.
-  const lanjut = () => {
+  const lanjut = async () => {
     const poin = draf.brief.split('\n').map((p) => p.trim()).filter(Boolean)
     const g = {
       nama: cekTeks(draf.nama, 'Nama produk', { min: 3, maks: 80 }),
@@ -116,6 +119,33 @@ export default function BuatKampanye() {
       return
     }
     setGalat('')
+
+    // Pemeriksaan etika AI saat isi kampanye ditulis, bukan baru saat bayar:
+    // isi yang menjelekkan usaha lain berhenti di sini dan tidak pernah
+    // sampai ke langkah Midtrans. Gerbang di langkah bayar tetap jadi lapis kedua.
+    setMemeriksa(true)
+    setModerasi(null)
+    try {
+      const { moderasi: hasil } = await api.periksaIsiKampanye({
+        nama: draf.nama,
+        deskripsi: draf.deskripsi || undefined,
+        brief: poin,
+        referensi: (draf.referensi || []).map(({ judul, penulis }) => ({ judul, penulis })),
+      })
+      if (hasil.status === 'ditolak') {
+        setModerasi(hasil)
+        requestAnimationFrame(() => document.getElementById('hasil-etika')?.scrollIntoView({ block: 'center', behavior: 'smooth' }))
+        return
+      }
+    } catch (err) {
+      // Pemeriksa tak terjangkau: jangan mengunci UMKM. Langkah bayar memeriksa ulang.
+      if (err.rincian?.moderasi) {
+        setModerasi(err.rincian.moderasi)
+        return
+      }
+    } finally {
+      setMemeriksa(false)
+    }
     navigate('/umkm/kampanye/target')
   }
 
@@ -297,12 +327,19 @@ export default function BuatKampanye() {
             <button
               type="button"
               onClick={lanjut}
-              className="btn-primary w-full py-3.5"
+              disabled={memeriksa}
+              className="btn-primary w-full py-3.5 disabled:opacity-60"
             >
-              Lanjut ke Target &amp; Anggaran <ArrowRight size={18} />
+              {memeriksa ? 'AI memeriksa isi kampanye…' : <>Lanjut ke Target &amp; Anggaran <ArrowRight size={18} /></>}
             </button>
           </Tekan>
         </motion.div>
+
+        {moderasi && (
+          <div id="hasil-etika" className="mt-4">
+            <PemeriksaanEtika moderasi={moderasi} kampanyeId={null} tautanUbah="#nama-produk" />
+          </div>
+        )}
 
         {galat && (
           <motion.p

@@ -113,6 +113,7 @@ const isianKampanye = (nama) => ({
 })
 
 const buatKampanye = (token, nama) => panggil('POST', '/api/kampanye', { token, body: isianKampanye(nama) })
+const statusKampanye = (id) => db.prepare('SELECT status FROM kampanye WHERE id = ?').get(id).status
 const jumlahKampanye = (umkmId) => db.prepare('SELECT COUNT(*) AS n FROM kampanye WHERE umkm_id = ?').get(umkmId).n
 const barisBiaya = (umkmId) =>
   db.prepare("SELECT * FROM pembayaran WHERE umkm_id = ? AND jenis = 'biaya_pasang' ORDER BY dibuat_pada").all(umkmId)
@@ -337,6 +338,97 @@ describe('Biaya pasang kampanye', () => {
     it('UMKM lain tidak bisa mengecek tagihan biaya pasang milik orang', async () => {
       const res = await panggil('POST', `/api/pembayaran/${k.order}/cek`, { token: k.umkm.token })
       assert.equal(res.status, 403)
+    })
+
+    describe('mode demo', () => {
+      before(() => {
+        config.modeDemo = true
+      })
+      after(() => {
+        config.modeDemo = false
+      })
+
+      it('tetap menagih biaya pasang dan menyediakan simulasi di samping Midtrans', async () => {
+        const d = await daftarkan({ peran: 'umkm', nama: 'Bu Demo', email: 'demo-bp@tes.id' })
+        k.demo = d
+        const st = await panggil('GET', '/api/pembayaran/biaya-pasang', { token: d.token })
+        assert.equal(st.data.aktif, true, 'mode demo tidak boleh membuang biaya pasang')
+        assert.equal(st.data.sudahBayar, false)
+        assert.equal(st.data.midtrans, true)
+        assert.equal(st.data.modeDemo, true)
+        assert.equal((await buatKampanye(d.token, 'Kampanye Demo Belum Bayar')).status, 402)
+
+        const konfig = await panggil('GET', '/api/pembayaran/konfigurasi')
+        assert.equal(konfig.data.aktif, true)
+        assert.equal(konfig.data.modeDemo, true)
+      })
+
+      it('simulasi biaya pasang jalan walau Midtrans aktif, lalu kampanye bisa dibuat', async () => {
+        const bayar = await panggil('POST', '/api/pembayaran/biaya-pasang/simulasi', { token: k.demo.token })
+        assert.equal(bayar.status, 201, JSON.stringify(bayar.data))
+        assert.equal(bayar.data.tagihan.status, 'lunas')
+        const buat = await buatKampanye(k.demo.token, 'Kampanye Demo Lunas')
+        assert.equal(buat.status, 201, JSON.stringify(buat.data))
+        k.kampanyeDemo = buat.data.kampanye.id
+      })
+
+      it('periksa tidak lagi mendanai otomatis; setor simulasi baru mendanai', async () => {
+        const periksa = await panggil('POST', `/api/kampanye/${k.kampanyeDemo}/periksa`, { token: k.demo.token })
+        assert.equal(periksa.status, 200)
+        assert.equal(periksa.data.moderasi.status, 'lolos')
+        assert.equal(db.prepare('SELECT jumlah_disetor AS n FROM escrow WHERE kampanye_id = ?').get(k.kampanyeDemo).n, 0)
+        assert.equal(statusKampanye(k.kampanyeDemo), 'menunggu_dana')
+
+        const setor = await panggil('POST', `/api/kampanye/${k.kampanyeDemo}/setor`, { token: k.demo.token, body: { jumlah: 50_000 } })
+        assert.equal(setor.status, 200, JSON.stringify(setor.data))
+        assert.equal(statusKampanye(k.kampanyeDemo), 'berjalan')
+        const label = db.prepare("SELECT label FROM transaksi WHERE kampanye_id = ? AND jenis = 'setor'").get(k.kampanyeDemo).label
+        assert.match(label, /^DEMO:/)
+      })
+
+      it('simulasi setor tetap melewati gerbang etika', async () => {
+        await panggil('POST', '/api/pembayaran/biaya-pasang/simulasi', { token: k.demo.token })
+        const buat = await panggil('POST', '/api/kampanye', {
+          token: k.demo.token,
+          body: { ...isianKampanye('Bakso Aci Kotor'), deskripsi: 'Jangan beli bakso di warung sebelah, mereka pakai boraks dan penipu.' },
+        })
+        assert.equal(buat.status, 201, JSON.stringify(buat.data))
+        const id = buat.data.kampanye.id
+        const setor = await panggil('POST', `/api/kampanye/${id}/setor`, { token: k.demo.token, body: { jumlah: 50_000 } })
+        assert.equal(setor.status, 422)
+        assert.equal(statusKampanye(id), 'menunggu_dana')
+      })
+    })
+  })
+
+  describe('pemeriksaan isi saat mengisi kampanye', () => {
+    it('menolak isi yang menjelekkan usaha lain sebelum disimpan atau dibayar', async () => {
+      const res = await panggil('POST', '/api/kampanye/periksa-isi', {
+        token: k.umkm.token,
+        body: {
+          nama: 'Bakso Aci Mang Oleh',
+          deskripsi: 'Jangan beli bakso di warung sebelah, mereka pakai boraks dan penipu.',
+          brief: ['Tunjukkan bakso kami enak'],
+        },
+      })
+      assert.equal(res.status, 200, JSON.stringify(res.data))
+      assert.equal(res.data.moderasi.status, 'ditolak')
+      assert.ok(res.data.moderasi.temuan.length > 0)
+      assert.equal(jumlahKampanye(k.umkm.id), db.prepare('SELECT COUNT(*) AS n FROM kampanye WHERE umkm_id = ?').get(k.umkm.id).n)
+    })
+
+    it('meloloskan isi yang hanya membahas produk sendiri', async () => {
+      const res = await panggil('POST', '/api/kampanye/periksa-isi', {
+        token: k.umkm.token,
+        body: { nama: 'Kopi Gayo Bang Ucok', deskripsi: 'Kopi arabika Gayo sangrai harian, diseduh manual V60.', brief: ['Tunjukkan proses seduh'] },
+      })
+      assert.equal(res.status, 200)
+      assert.equal(res.data.moderasi.status, 'lolos')
+    })
+
+    it('hanya untuk UMKM dan menolak isian yang cacat', async () => {
+      assert.equal((await panggil('POST', '/api/kampanye/periksa-isi', { token: k.kreator.token, body: { nama: 'Kopi Gayo' } })).status, 403)
+      assert.equal((await panggil('POST', '/api/kampanye/periksa-isi', { token: k.umkm.token, body: { nama: 'Ab' } })).status, 400)
     })
   })
 })

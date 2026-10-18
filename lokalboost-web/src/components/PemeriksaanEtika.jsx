@@ -39,7 +39,8 @@ export default function PemeriksaanEtika({ kampanyeId, moderasi, onBerubah, taut
 
   if (!moderasi || moderasi.status === 'belum') return null
   const t = TAMPILAN[moderasi.status] || TAMPILAN.ditolak
-  const bolehBanding = moderasi.status === 'ditolak' && !moderasi.keputusanAdmin
+  // Banding butuh kampanye tersimpan; pemeriksaan saat mengisi (langkah 1) belum punya id.
+  const bolehBanding = Boolean(kampanyeId) && moderasi.status === 'ditolak' && !moderasi.keputusanAdmin
 
   const kirimBanding = async () => {
     setGalat('')

@@ -25,7 +25,7 @@ import { kirimNotifikasi } from './notifikasi.js'
  * simulasi ditutup.
  */
 
-export const biayaPasangAktif = () => !config.modeDemo && config.biayaPasang > 0
+export const biayaPasangAktif = () => config.biayaPasang > 0
 
 const KUERI_TIKET = `SELECT * FROM pembayaran
   WHERE umkm_id = ? AND jenis = 'biaya_pasang' AND status = 'lunas' AND kampanye_id IS NULL
@@ -57,6 +57,7 @@ export function statusBiayaPasang(umkmId) {
     aktif: biayaPasangAktif(),
     biaya: config.biayaPasang,
     midtrans: midtransAktif(),
+    modeDemo: config.modeDemo,
     sudahBayar: !biayaPasangAktif() || Boolean(tiket),
     tiket: bentukTagihan(tiket),
     menunggu: bentukTagihan(menunggu),
@@ -104,10 +105,12 @@ function galatBelumBayar() {
  * Bayar biaya pasang tanpa Midtrans (laptop, demo tanpa kunci). Ditutup
  * begitu Midtrans aktif: tanpa penutupan itu siapa pun bisa memanggil
  * endpoint ini langsung dan memasang kampanye tanpa membayar.
+ * Pengecualian: MODE_DEMO, mode presentasi yang memang tidak menagih uang
+ * sungguhan (saldo & dompet demo tidak bisa ditarik).
  */
 export const bayarSimulasi = transaksional((umkmId) => {
   if (!biayaPasangAktif()) throw galat409('Biaya pasang kampanye sedang tidak berlaku.')
-  if (midtransAktif()) {
+  if (midtransAktif() && !config.modeDemo) {
     throw galat409('Biaya pasang dibayar lewat Midtrans. Buat tagihan lewat POST /api/pembayaran/biaya-pasang/tagihan.')
   }
   if (tiketTersedia(umkmId)) throw galat409('Biaya pasang sudah lunas. Lanjutkan mengisi kampanye Anda.')
@@ -122,7 +125,7 @@ export const bayarSimulasi = transaksional((umkmId) => {
   kirimNotifikasi(umkmId, {
     jenis: 'dana',
     judul: 'Biaya pasang kampanye lunas',
-    isi: `Pembayaran ${rupiah(config.biayaPasang)} (simulasi) diterima. Anda sekarang bisa mengisi dan menerbitkan satu kampanye.`,
+    isi: `Pembayaran ${rupiah(config.biayaPasang)} (simulasi demo) diterima. Anda sekarang bisa mengisi dan menerbitkan satu kampanye.`,
     tautan: '/umkm/kampanye/baru',
   })
   return bentukTagihan(db.prepare('SELECT * FROM pembayaran WHERE order_id = ?').get(orderId))

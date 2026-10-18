@@ -71,6 +71,8 @@ export default function SetorDana() {
   const { data: katalogData } = useApi(() => api.produkSaya(), [])
   const h = hitungDraf(draf, katalogData?.produk || [])
   const produkSaja = h.model === 'produk'
+  // Mode demo: tombol simulasi tambahan di samping Midtrans sandbox.
+  const adaSimulasi = Boolean(pakaiMidtrans && konfigBayar?.modeDemo && !produkSaja)
 
   const selesai = (kampanyeId) => {
     sudahBayar.current = true
@@ -120,7 +122,7 @@ export default function SetorDana() {
     return kampanyeId
   }
 
-  const bayar = async () => {
+  const bayar = async (simulasi = false) => {
     setGalat('')
     setInfo('')
     setSibuk(true)
@@ -133,11 +135,6 @@ export default function SetorDana() {
       setModerasi(periksa.moderasi)
       if (periksa.moderasi.status !== 'lolos') return
 
-      if (periksa.modeDemo && periksa.kampanye?.status === 'berjalan') {
-        setInfo('Kampanye aktif dengan dana simulasi. Tidak ada pembayaran sungguhan.')
-        return selesai(kampanyeId)
-      }
-
       // Reward produk saja: tidak ada uang yang ditagih, kampanye langsung terbit.
       if (produkSaja) {
         setTahap('Menerbitkan kampanye…')
@@ -145,7 +142,7 @@ export default function SetorDana() {
         return selesai(kampanyeId)
       }
 
-      if (pakaiMidtrans) {
+      if (pakaiMidtrans && !simulasi) {
         setTahap('Membuka pembayaran Midtrans…')
         const hasil = await bayarDenganSnap({ konfigurasi: konfigBayar, kampanyeId, metode: method })
         setTagihanTerakhir(hasil.tagihan)
@@ -154,7 +151,7 @@ export default function SetorDana() {
         return
       }
 
-      setTahap('Menyetor dana ke Rekber…')
+      setTahap(simulasi ? 'Menyimulasikan setoran…' : 'Menyetor dana ke Rekber…')
       await api.setorDana(kampanyeId, { jumlah: anggaran, metode: method })
       selesai(kampanyeId)
     } catch (err) {
@@ -432,7 +429,7 @@ export default function SetorDana() {
               <Tekan className="mt-4 block">
                 <button
                   type="button"
-                  onClick={bayar}
+                  onClick={() => bayar(false)}
                   disabled={sibuk || moderasi?.status === 'tinjau'}
                   className="btn-primary w-full py-3 disabled:opacity-60"
                 >
@@ -447,6 +444,18 @@ export default function SetorDana() {
                   )}
                 </button>
               </Tekan>
+              {adaSimulasi && (
+                <Tekan className="mt-3 block">
+                  <button
+                    type="button"
+                    onClick={() => bayar(true)}
+                    disabled={sibuk || moderasi?.status === 'tinjau'}
+                    className="btn-outline w-full py-3 disabled:opacity-60"
+                  >
+                    Simulasi Demo: setor {rupiah(anggaran)} tanpa Midtrans
+                  </button>
+                </Tekan>
+              )}
               <Tekan className="mt-3 block">
                 <Link to="/umkm/kampanye/target" className="btn-outline w-full py-3">Kembali ke Langkah 2</Link>
               </Tekan>
