@@ -26,7 +26,7 @@ process.env.BOCORKAN_OTP = 'true'
 process.env.TURSO_DATABASE_URL = ''
 // Setor dana simulasi. Midtrans diuji terpisah di midtrans.test.js.
 process.env.MIDTRANS_SERVER_KEY = ''
-process.env.KOMISI_PERSEN = '5'
+process.env.KOMISI_PERSEN = '0'
 
 const { buatApp } = await import('../src/app.js')
 const { db } = await import('../src/lib/db.js')
@@ -143,18 +143,9 @@ describe('Ruang admin, moderasi konten, dan sengketa', () => {
       body: { jumlah: 20_000 },
     })
 
-    await panggil('POST', `/api/kampanye/${k.kampanyeId}/undang`, {
-      token: k.umkm.token,
-      body: { kreatorId: k.kreator.id, pesan: 'Kami tertarik.' },
-    })
-    const daftarLamaran = await panggil('GET', `/api/kampanye/${k.kampanyeId}/lamaran`, {
-      token: k.umkm.token,
-    })
-    await panggil(
-      'POST',
-      `/api/kampanye/${k.kampanyeId}/lamaran/${daftarLamaran.data.lamaran[0].id}/setujui`,
-      { token: k.umkm.token },
-    )
+    // Kreator bergabung langsung, tanpa undangan atau persetujuan UMKM.
+    const gabung = await panggil('POST', `/api/kampanye/${k.kampanyeId}/lamaran`, { token: k.kreator.token })
+    assert.equal(gabung.status, 201, JSON.stringify(gabung.data))
 
     const video = await panggil('POST', '/api/video', {
       token: k.kreator.token,
@@ -223,7 +214,7 @@ describe('Ruang admin, moderasi konten, dan sengketa', () => {
     assert.equal(r.antiFraud.tervalidasi, 50)
     assert.equal(r.antiFraud.disaring, 10)
     assert.ok(r.antiFraud.rincian.length > 0, 'rincian alasan penyaringan harus ada')
-    assert.equal(r.keuangan.komisiPersen, 5)
+    assert.equal(r.keuangan.komisiPersen, 0, 'komisi reward kreator dihapus')
     assert.equal(r.konten.menungguModerasi, 1)
     // Dana yang belum dicairkan masih tertahan di Rekber.
     assert.equal(r.keuangan.danaDiRekber, 20_000 - 50 * 100)
@@ -236,8 +227,8 @@ describe('Ruang admin, moderasi konten, dan sengketa', () => {
 
     assert.equal(kampanye.disetor, 20_000)
     assert.equal(kampanye.terpakai, 5000)
-    assert.equal(kampanye.komisi, 250)
-    assert.equal(kampanye.diterimaKreator, 4750)
+    assert.equal(kampanye.komisi, 0)
+    assert.equal(kampanye.diterimaKreator, 5000)
     assert.equal(kampanye.sisaDitahan, 15_000)
     assert.equal(kampanye.selisihNeraca, 0, 'neraca escrow wajib tertutup')
   })
@@ -413,8 +404,8 @@ describe('Ruang admin, moderasi konten, dan sengketa', () => {
 
   it('mencatat pencairan hasil banding di dompet kreator', async () => {
     const dompet = await panggil('GET', '/api/dompet', { token: k.kreator.token })
-    // 60 tayangan × Rp 100 dikurangi komisi 5%.
-    assert.equal(dompet.data.dompet.saldoTertahan, 6000 - 300)
+    // 60 tayangan × Rp 100, tanpa komisi (dihapus).
+    assert.equal(dompet.data.dompet.saldoTertahan, 6000)
 
     const audit = await panggil('POST', `/api/kampanye/${k.kampanyeId}/audit-fraud`, {
       token: k.umkm.token,

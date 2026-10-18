@@ -20,7 +20,7 @@ process.env.BIAYA_PASANG_KAMPANYE = '0'
 process.env.BOCORKAN_OTP = 'true'
 process.env.TURSO_DATABASE_URL = ''
 process.env.MIDTRANS_SERVER_KEY = ''
-process.env.KOMISI_PERSEN = '5'
+process.env.KOMISI_PERSEN = '0'
 // ScrapeCreators dipalsukan di bawah; kuncinya hanya supaya jalurnya aktif.
 process.env.SCRAPECREATORS_API_KEY = 'kunci-uji'
 process.env.SCRAPECREATORS_BASE_URL = 'https://scrape.uji'
@@ -119,13 +119,12 @@ async function kampanyeBerdana(umkm, isian) {
   return id
 }
 
-async function gabung(kampanyeId, umkm, kreator) {
-  const lamar = await panggil('POST', `/api/kampanye/${kampanyeId}/undang`, { token: umkm.token, body: { kreatorId: kreator.id } })
+/** Kreator bergabung langsung; UMKM tidak mengundang atau menyetujui (routes/kampanye.js). */
+async function gabung(kampanyeId, _umkm, kreator) {
+  const lamar = await panggil('POST', `/api/kampanye/${kampanyeId}/lamaran`, { token: kreator.token })
   assert.equal(lamar.status, 201, JSON.stringify(lamar.data))
-  const daftar = await panggil('GET', `/api/kampanye/${kampanyeId}/lamaran`, { token: umkm.token })
-  const l = daftar.data.lamaran.find((x) => x.kreatorId === kreator.id)
-  const setuju = await panggil('POST', `/api/kampanye/${kampanyeId}/lamaran/${l.id}/setujui`, { token: umkm.token })
-  assert.equal(setuju.status, 200, JSON.stringify(setuju.data))
+  const daftar = await panggil('GET', `/api/kampanye/${kampanyeId}/lamaran`, { token: kreator.token })
+  assert.ok(daftar.data.lamaran.some((x) => x.kreatorId === kreator.id && x.status === 'disetujui'))
 }
 
 /** Pasang views tervalidasi seorang kreator lewat satu video tautan, lalu akrualkan. */
@@ -266,7 +265,7 @@ describe('Reward fleksibel', () => {
       assert.equal(a.bruto_akrual, 70_000)
       assert.equal(b.bruto_akrual, 29_000)
       // Sisa dana Rp 1.000 masih ada: kreator ketiga masih boleh melamar.
-      const lamar = await panggil('POST', `/api/kampanye/${id}/undang`, { token: k.umkm.token, body: { kreatorId: k.c.id } })
+      const lamar = await panggil('POST', `/api/kampanye/${id}/lamaran`, { token: k.c.token })
       assert.equal(lamar.status, 201, JSON.stringify(lamar.data))
       k.kampanyeSempit = id
     })
@@ -280,7 +279,7 @@ describe('Reward fleksibel', () => {
       const a = db.prepare('SELECT bruto_akrual FROM lamaran WHERE kampanye_id = ? AND kreator_id = ?').get(id, k.a.id)
       assert.equal(a.bruto_akrual, 100_000)
       assert.equal(db.prepare('SELECT status FROM kampanye WHERE id = ?').get(id).status, 'selesai')
-      const lamar = await panggil('POST', `/api/kampanye/${id}/undang`, { token: k.umkm.token, body: { kreatorId: k.b.id } })
+      const lamar = await panggil('POST', `/api/kampanye/${id}/lamaran`, { token: k.b.token })
       assert.equal(lamar.status, 409)
     })
   })
@@ -307,7 +306,7 @@ describe('Reward fleksibel', () => {
       setelViews(id, k.a.id, 2300) // milestone ke-2 langsung tercapai
       const cair = await panggil('POST', `/api/kampanye/${id}/cairkan`, { token: k.a.token })
       assert.equal(cair.status, 200, JSON.stringify(cair.data))
-      const bersih = 23_000 - Math.round((23_000 * 5) / 100)
+      const bersih = 23_000 // tanpa komisi (dihapus)
       assert.equal(cair.data.nominal, bersih)
       assert.equal(cair.data.milestone, 2)
       assert.equal((await dompet(k.a)).saldo, saldoAwal + bersih)
@@ -321,7 +320,7 @@ describe('Reward fleksibel', () => {
       setelViews(id, k.a.id, 3000) // milestone ke-3
       const lagi = await panggil('POST', `/api/kampanye/${id}/cairkan`, { token: k.a.token })
       assert.equal(lagi.status, 200, JSON.stringify(lagi.data))
-      const hakTotal = 30_000 - Math.round((30_000 * 5) / 100)
+      const hakTotal = 30_000
       assert.equal(cair.data.nominal + lagi.data.nominal, hakTotal)
     })
 

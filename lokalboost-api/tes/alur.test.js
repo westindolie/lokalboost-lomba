@@ -37,7 +37,8 @@ const { BOBOT_MATCHMAKER } = await import('../src/services/matchmaker.js')
 let server
 let basis
 
-const KOMISI_PERSEN = 5
+// Komisi reward kreator dihapus (config.komisiPersen = 0): pendapatan platform = biaya pasang.
+const KOMISI_PERSEN = 0
 
 /** Pembungkus fetch yang otomatis menempelkan token dan mem-parsing JSON. */
 async function panggil(metode, jalur, { token, body } = {}) {
@@ -355,39 +356,35 @@ describe('Alur lengkap UMKM dan kreator', () => {
     assert.equal(rafi.rincian.niche, BOBOT_MATCHMAKER.niche)
   })
 
-  it('menjalankan undangan kreator sampai disetujui UMKM', async () => {
-    const tutup = await panggil('POST', `/api/kampanye/${konteks.kampanyeId}/lamaran`, {
+  it('membiarkan kreator bergabung langsung tanpa undangan atau persetujuan UMKM', async () => {
+    const lamar = await panggil('POST', `/api/kampanye/${konteks.kampanyeId}/lamaran`, {
       token: konteks.kreator.token,
-      body: { pesan: 'Saya mau ikut sendiri.' },
-    })
-    assert.equal(tutup.status, 409, 'kreator tidak boleh mengajukan diri')
-
-    const lamar = await panggil('POST', `/api/kampanye/${konteks.kampanyeId}/undang`, {
-      token: konteks.umkm.token,
-      body: { kreatorId: konteks.kreator.id, pesan: 'Kami ingin Anda ikut.' },
+      body: { pesan: 'Saya mau ikut.' },
     })
     assert.equal(lamar.status, 201, JSON.stringify(lamar.data))
+    assert.equal(lamar.data.kampanye.status, 'berjalan')
+    assert.equal(lamar.data.kampanye.kreatorId, konteks.kreator.id)
 
-    const daftar = await panggil('GET', `/api/kampanye/${konteks.kampanyeId}/lamaran`, {
-      token: konteks.umkm.token,
-    })
+    const ulang = await panggil('POST', `/api/kampanye/${konteks.kampanyeId}/lamaran`, { token: konteks.kreator.token })
+    assert.equal(ulang.status, 409, 'bergabung dua kali harus ditolak')
+
+    const daftar = await panggil('GET', `/api/kampanye/${konteks.kampanyeId}/lamaran`, { token: konteks.umkm.token })
     assert.equal(daftar.data.lamaran.length, 1)
+    assert.equal(daftar.data.lamaran[0].status, 'disetujui')
     konteks.lamaranId = daftar.data.lamaran[0].id
 
-    const setuju = await panggil(
-      'POST',
-      `/api/kampanye/${konteks.kampanyeId}/lamaran/${konteks.lamaranId}/setujui`,
-      { token: konteks.umkm.token },
-    )
-    assert.equal(setuju.status, 200)
-    assert.equal(setuju.data.kampanye.status, 'berjalan')
-    assert.equal(setuju.data.kampanye.kreatorId, konteks.kreator.id)
+    // Jalur lama (undangan + persetujuan UMKM) sudah dihapus.
+    const undang = await panggil('POST', `/api/kampanye/${konteks.kampanyeId}/undang`, {
+      token: konteks.umkm.token,
+      body: { kreatorId: konteks.kreator.id },
+    })
+    assert.equal(undang.status, 404)
   })
 
-  it('memberi notifikasi persetujuan ke kreator', async () => {
-    const notif = await panggil('GET', '/api/notifikasi', { token: konteks.kreator.token })
+  it('memberi tahu UMKM bahwa kreator bergabung', async () => {
+    const notif = await panggil('GET', '/api/notifikasi', { token: konteks.umkm.token })
     assert.ok(notif.data.belumDibaca > 0)
-    assert.ok(notif.data.notifikasi.some((n) => /disetujui/i.test(n.judul)))
+    assert.ok(notif.data.notifikasi.some((n) => /kreator bergabung/i.test(n.judul)))
   })
 
   it('mengunggah video dan memprosesnya dengan AI', async () => {
