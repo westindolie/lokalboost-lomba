@@ -65,12 +65,7 @@ export default function SetorDana() {
   const { data: konfigBayar } = useApi(() => api.konfigurasiPembayaran(), [])
   const pakaiMidtrans = Boolean(konfigBayar?.aktif)
 
-  // Persentase komisi diambil dari server, bukan ditulis ulang di sini —
-  // supaya angka di layar tidak pernah berbeda dari yang dipotong sistem.
-  const { data: statistik } = useApi(() => api.statistikPublik(), [])
-  const komisiPersen = statistik?.komisiPersen ?? 5
-  const komisi = Math.round((anggaran * komisiPersen) / 100)
-  const diterimaKreator = anggaran - komisi
+  const diterimaKreator = anggaran
 
   // Katalog hanya untuk menampilkan nama/nilai produk di ringkasan.
   const { data: katalogData } = useApi(() => api.produkSaya(), [])
@@ -383,14 +378,9 @@ export default function SetorDana() {
                   <dt className="text-ink-soft">Diterima kreator</dt>
                   <dd className="font-semibold text-navy">{rupiah(diterimaKreator)}</dd>
                 </div>
-                <div className="flex justify-between">
-                  <dt className="text-ink-soft">Komisi platform ({komisiPersen}%)</dt>
-                  <dd className="font-semibold text-navy">{rupiah(komisi)}</dd>
-                </div>
                 <p className="border-t border-black/5 pt-2 text-ink-muted">
-                  Komisi dipotong dari bagian kreator, bukan ditambahkan ke tagihan Anda. Yang tidak
-                  terpakai, termasuk reward kreator yang tidak mencapai target minimal, kembali ke dompet
-                  Anda saat kampanye ditutup.
+                  Seluruh anggaran tunai menjadi pagu reward kreator. Reward dihitung dari tayangan
+                  tervalidasi. Dana yang tidak terpakai kembali ke dompet Anda saat kampanye ditutup.
                 </p>
               </dl>
 

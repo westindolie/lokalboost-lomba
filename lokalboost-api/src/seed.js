@@ -66,7 +66,7 @@ const KAMPANYE = [
   },
   {
     id: 'kopi-tubruk', umkmId: 'umkm_kopihar', nama: 'Promo Kopi Tubruk Pak Har',
-    // Cukup besar supaya saldo siap tarik Sari (~Rp 2,85 juta setelah komisi)
+    // Cukup besar supaya saldo siap tarik Sari cukup untuk demo.
     // melewati ambang 2FA Rp 2 juta: alur "penarikan besar minta kode kedua"
     // bisa diperagakan langsung, tanpa harus menutup kampanye lain dulu.
     kategori: 'Kuliner', lokasi: 'Banda Aceh', targetViews: 12_000, tarifPerView: 250, anggaran: 3_100_000,

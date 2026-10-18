@@ -93,8 +93,7 @@ export function DrafKampanyeProvider({ children }) {
       /** Langkah 1 sudah diisi — syarat untuk membuka langkah 2 dan 3. */
       langkahSatuLengkap: Boolean(draf.nama.trim() && draf.kategori && draf.lokasi.trim()),
       kodeUnik: KODE_UNIK,
-      /* UMKM membayar anggaran apa adanya. Komisi platform dipotong dari
-         bagian kreator, jadi ia tidak boleh menambah tagihan di sini. */
+      /* Anggaran kampanye dibayar apa adanya. Biaya pasang ditagih terpisah. */
       totalBayar: anggaran > 0 ? anggaran + KODE_UNIK : 0,
       /** Poin brief satu per baris → array, siap dikirim ke API. */
       briefArray: draf.brief

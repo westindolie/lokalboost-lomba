@@ -20,7 +20,7 @@ import { Wallet, Chart, Eye, Sparkles, MapPin, Store, Doc } from '../components/
  * pendapatan semuanya dari GET /api/dashboard/kreator. "Estimasi pendapatan"
  * kini memakai saldo sungguhan (siap tarik + tertahan), bukan perkalian
  * views × tarif yang dilakukan halaman ini sendiri — perkalian itu selalu
- * lebih besar dari yang benar-benar diterima, karena mengabaikan komisi.
+ * bisa berbeda dari reward yang sudah tervalidasi dan masuk ke saldo.
  */
 export default function DashboardKreator() {
   const { profil } = useSesi()

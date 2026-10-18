@@ -97,9 +97,6 @@ rutaDashboard.get(
       rerataPenilaian: db.prepare(
         'SELECT AVG(u.bintang) AS n FROM ulasan u JOIN pengguna p ON p.id = u.penilai_id WHERE p.contoh = 0',
       ).get().n,
-      // Persentase komisi adalah syarat layanan, bukan rahasia — halaman
-      // Setor Dana harus bisa menyebutnya tanpa menebak.
-      komisiPersen: config.komisiPersen,
       // Biaya pasang per kampanye juga syarat layanan (landing menyebutnya).
       biayaPasang: config.biayaPasang,
     })

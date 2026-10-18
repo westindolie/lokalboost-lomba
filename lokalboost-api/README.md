@@ -89,7 +89,7 @@ Tiga aturan yang dipegang seluruh modul:
 
 Semua operasi uang dibungkus transaksi SQLite, jadi tidak ada kondisi setengah
 jalan bila proses mati di tengah. Tes `npm test` memverifikasi neraca tertutup:
-`dibayar ke kreator + komisi platform + refund = dana yang disetor`.
+`dibayar penuh ke kreator + refund atau sisa Rekber = dana yang disetor`.
 
 **Kebijakan refund** (PRD §15 menandainya sebagai pertanyaan terbuka): bila
 target tidak tercapai sampai kampanye berakhir, kreator tetap dibayar untuk

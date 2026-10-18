@@ -18,7 +18,7 @@ app.listen(config.port, async () => {
   console.log('  LokalBoost API')
   console.log(`  Berjalan di      http://localhost:${config.port}`)
   console.log(`  Basis data       ${config.dbPath}`)
-  console.log(`  Komisi platform  ${config.komisiPersen}%`)
+  console.log(`  Biaya pasang     Rp ${config.biayaPasang.toLocaleString('id-ID')} per kampanye`)
   console.log(`  Model bahasa     ${aiAktif() ? `${penyediaAi().nama} (${penyediaAi().model})` : 'nonaktif (pakai template)'}`)
   console.log(`  Frontend         ${config.asalDiizinkan.join(', ')}`)
   if (!surelAktif()) {

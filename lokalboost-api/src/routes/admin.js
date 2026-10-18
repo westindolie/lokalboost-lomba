@@ -102,7 +102,7 @@ rutaAdmin.get(
 /**
  * GET /api/admin/kampanye
  * Neraca dana per kampanye. Kolom-kolomnya sengaja mengikuti aturan yang
- * dipegang escrow.js: bagian kreator + komisi + sisa = dana disetor. Kalau
+ * dipegang escrow.js: bagian kreator + biaya historis + sisa = dana disetor. Kalau
  * suatu hari selisihnya tidak nol, halaman ini yang akan menunjukkannya.
  */
 rutaAdmin.get(

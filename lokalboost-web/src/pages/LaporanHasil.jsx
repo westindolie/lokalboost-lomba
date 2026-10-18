@@ -37,7 +37,6 @@ function unduhCsv(laporan) {
     ['Persentase target', `${laporan.persenTarget}%`],
     ['Biaya terpakai', laporan.keuangan.terpakai],
     ['Dana disetor', laporan.keuangan.disetor],
-    ['Komisi platform', laporan.keuangan.komisiPlatform],
     ['Diterima kreator', laporan.keuangan.diterimaKreator],
     [],
     ['Tanggal', 'Hari', 'Views tervalidasi'],
@@ -342,11 +341,10 @@ export default function LaporanHasil() {
           <h2 className="flex items-center gap-2 section-title">
             <Wallet size={20} /> Ke Mana Dana Anda Pergi
           </h2>
-          <dl className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <dl className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {[
               ['Disetor ke Rekber', l.keuangan.disetor],
               ['Diterima kreator', l.keuangan.diterimaKreator],
-              ['Komisi platform', l.keuangan.komisiPlatform],
               [
                 l.status === 'selesai' ? 'Dikembalikan ke Anda' : 'Masih ditahan Rekber',
                 l.status === 'selesai' ? l.keuangan.dikembalikan : l.keuangan.sisaDitahan,
@@ -359,7 +357,7 @@ export default function LaporanHasil() {
             ))}
           </dl>
           <p className="mt-4 text-xs text-ink-muted">
-            Komisi platform dipotong dari bagian kreator, bukan ditambahkan ke tagihan Anda.
+            Reward kreator dibayarkan sesuai tarif dan tayangan tervalidasi. Sisa dana yang tidak terpakai kembali ke dompet Anda setelah kampanye ditutup.
           </p>
         </motion.div>
 

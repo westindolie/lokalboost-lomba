@@ -689,7 +689,7 @@ export default function TargetBudgeting() {
               <p className="font-semibold text-navy">Contoh dengan angka Anda</p>
               <p className="mt-1">
                 Target kampanye {ribuan(h.target)} views. Kreator yang sudah mendapat {ribuan(contohAmbang)} views tervalidasi
-                {h.pakaiTunai && <> boleh mencairkan {rupiah(h.rewardDiAmbang)} (sebelum komisi platform)</>}
+                {h.pakaiTunai && <> boleh mencairkan reward {rupiah(h.rewardDiAmbang)}</>}
                 {h.pakaiTunai && h.pakaiProduk && ' dan'}
                 {h.pakaiProduk && <> boleh mengklaim satu produk selama kuota masih ada</>}. Kreator yang sampai kampanye selesai belum
                 mencapai ambangnya tidak mendapat reward{h.pakaiTunai && ', dan dananya kembali ke Anda'}.

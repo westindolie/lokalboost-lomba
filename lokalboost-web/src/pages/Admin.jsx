@@ -142,13 +142,6 @@ export default function Admin() {
             icon={Eye}
           />
           <StatCard
-            label={`Komisi ${r.keuangan.komisiPersen}%`}
-            nilai={r.keuangan.komisiTerkumpul}
-            prefiks="Rp "
-            sub="Dipotong dari bagian kreator"
-            icon={Wallet}
-          />
-          <StatCard
             label="Biaya Pasang Kampanye"
             nilai={r.keuangan.biayaPasangTerkumpul ?? 0}
             prefiks="Rp "
@@ -431,8 +424,8 @@ export default function Admin() {
             <Wallet size={20} /> Neraca Dana per Kampanye
           </h2>
           <p className="mt-1 text-sm text-ink-soft">
-            Bagian kreator + komisi platform + sisa (tertahan atau dikembalikan) harus selalu sama
-            dengan dana disetor. Kolom selisih memperlihatkannya apa adanya.
+            Reward kreator + sisa (tertahan atau dikembalikan) harus sama dengan dana disetor.
+            Kolom selisih memperlihatkan neraca kampanye.
           </p>
 
           {kampanye.memuat ? (
@@ -445,7 +438,6 @@ export default function Admin() {
                     <th className="pb-3 font-semibold">Kampanye</th>
                     <th className="pb-3 font-semibold">Disetor</th>
                     <th className="pb-3 font-semibold">Kreator</th>
-                    <th className="pb-3 font-semibold">Komisi</th>
                     <th className="pb-3 font-semibold">Sisa</th>
                     <th className="pb-3 font-semibold">Selisih</th>
                     <th className="pb-3 font-semibold">Status</th>
@@ -462,7 +454,6 @@ export default function Admin() {
                         </td>
                         <td className="py-3 text-ink-soft">{rupiah(k.disetor)}</td>
                         <td className="py-3 text-ink-soft">{rupiah(k.diterimaKreator)}</td>
-                        <td className="py-3 text-ink-soft">{rupiah(k.komisi)}</td>
                         <td className="py-3 text-ink-soft">
                           {rupiah(k.status === 'selesai' ? k.dikembalikan : k.sisaDitahan)}
                         </td>

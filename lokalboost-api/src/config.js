@@ -98,12 +98,8 @@ export const config = {
     batasDetik: Number(process.env.SCRAPECREATORS_BATAS_DETIK || 15),
   },
 
-  /**
-   * Komisi platform dari setiap pencairan ke kreator.
-   * PRD §15 menandai angka ini sebagai pertanyaan terbuka — kami pakai 5%
-   * sebagai default yang bisa diubah lewat env tanpa menyentuh kode.
-   */
-  komisiPersen: Number(process.env.KOMISI_PERSEN || 5),
+  /** Komisi reward kreator dihapus; pendapatan platform hanya biaya pasang. */
+  komisiPersen: 0,
 
   /**
    * Biaya pasang kampanye: pendapatan pengembang LokalBoost. UMKM membayar

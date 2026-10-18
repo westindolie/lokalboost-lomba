@@ -121,8 +121,7 @@ export default function DanaUmkm() {
             Sistem menyaring <b className="text-white">{ribuan(totalDisaring)} tayangan</b> yang
             terindikasi tidak wajar dari kampanye Anda. Nilainya{' '}
             <b className="text-white">{rupiah(dihematAntiFraud)}</b> — tetap di Rekber, tidak
-            dibayarkan ke siapa pun. Komisi platform dipotong dari bagian kreator, jadi tidak
-            menambah tagihan Anda.
+            dibayarkan ke siapa pun.
           </AIPanel>
         </motion.div>
 
@@ -131,7 +130,7 @@ export default function DanaUmkm() {
               melebarkan kolom grid, dan di HP halaman jadi lebih lebar dari layar. */}
           <motion.div variants={fadeUp} className="card min-w-0 p-7 lg:col-span-3">
             <h2 className="section-title">Riwayat Transaksi</h2>
-            <p className="mt-1 text-sm text-ink-soft">Setoran, komisi, dan pengembalian dana.</p>
+            <p className="mt-1 text-sm text-ink-soft">Setoran dan pengembalian dana Rekber.</p>
 
             {d.riwayat.length === 0 ? (
               <div className="mt-5">

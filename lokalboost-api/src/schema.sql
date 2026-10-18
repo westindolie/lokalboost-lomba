@@ -168,7 +168,7 @@ CREATE TABLE IF NOT EXISTS lamaran (
   -- Satu kampanye boleh diikuti banyak kreator sampai anggarannya habis.
   views_terhitung     INTEGER NOT NULL DEFAULT 0, -- views tervalidasi saat akrual terakhir
   bruto_akrual        INTEGER NOT NULL DEFAULT 0, -- rupiah yang sudah keluar dari escrow untuk kreator ini
-  komisi_akrual       INTEGER NOT NULL DEFAULT 0, -- bagian komisi platform dari bruto_akrual
+  komisi_akrual       INTEGER NOT NULL DEFAULT 0, -- legacy; reward baru tidak dipotong komisi
   bersih_dicairkan    INTEGER NOT NULL DEFAULT 0, -- yang sudah pindah ke saldo siap tarik
   milestone_dicairkan INTEGER NOT NULL DEFAULT 0, -- kelipatan ambang yang sudah dicairkan
   hangus              INTEGER NOT NULL DEFAULT 0, -- 1 = kampanye selesai sebelum ambang tercapai
@@ -227,7 +227,7 @@ CREATE TABLE IF NOT EXISTS escrow (
   kampanye_id       TEXT PRIMARY KEY REFERENCES kampanye(id) ON DELETE CASCADE,
   jumlah_disetor    INTEGER NOT NULL DEFAULT 0,
   jumlah_dicairkan  INTEGER NOT NULL DEFAULT 0,  -- yang sudah masuk dompet kreator
-  komisi_platform   INTEGER NOT NULL DEFAULT 0,
+  komisi_platform   INTEGER NOT NULL DEFAULT 0, -- legacy; reward baru tidak dikenai komisi
   jumlah_dikembalikan INTEGER NOT NULL DEFAULT 0, -- sisa yang balik ke UMKM
   status            TEXT NOT NULL DEFAULT 'kosong'
                       CHECK (status IN ('kosong','ditahan','sebagian_cair','selesai','dikembalikan')),
