@@ -11,7 +11,6 @@
  */
 import crypto from 'node:crypto'
 import { db, kosongkanSemua, transaksional } from './lib/db.js'
-import { config } from './config.js'
 import { hashSandi } from './lib/auth.js'
 import { buatId, hariLalu, hashIp } from './lib/util.js'
 import { akrualKampanye, selesaikanKampanye, setorDana } from './services/escrow.js'
@@ -388,21 +387,6 @@ kirimNotifikasi('krtr_rafi', {
 // Seluruh isi seed adalah karangan untuk demo. seed.js mengosongkan basis
 // data lebih dulu, jadi semua akun yang ada sekarang adalah akun contoh.
 db.prepare('UPDATE pengguna SET contoh = 1').run()
-
-// Snapshot demo hanya menyiapkan akun untuk login. Kampanye, saldo, transaksi,
-// tayangan contoh, dan tautan portofolio palsu tidak boleh tampak seperti hasil
-// yang sudah diperoleh kreator atau UMKM.
-if (config.modeDemo) {
-  transaksional(() => {
-    db.prepare('DELETE FROM kampanye').run()
-    db.prepare('DELETE FROM transaksi').run()
-    db.prepare('DELETE FROM pembayaran').run()
-    db.prepare('DELETE FROM notifikasi').run()
-    db.prepare('DELETE FROM portofolio_tautan').run()
-    db.prepare('DELETE FROM produk').run()
-    db.prepare('UPDATE dompet SET saldo = 0, saldo_tertahan = 0').run()
-  })()
-}
 
 const hitung = (sql) => db.prepare(sql).get().n
 

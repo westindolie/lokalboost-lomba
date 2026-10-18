@@ -277,9 +277,9 @@ export async function setorTautanVideo({ kampanyeId, kreator, url, judul }) {
     throw galat409(`Maksimal ${MAKS_VIDEO_PER_KREATOR} video per kreator di satu kampanye.`)
   }
 
-  const akunSaya = config.modeDemo ? [] : akunKreator(kreator.id, dasar.platform)
+  const akunSaya = akunKreator(kreator.id, dasar.platform)
   const namaPlatform = { tiktok: 'TikTok', instagram: 'Instagram', youtube: 'YouTube' }[dasar.platform]
-  if (!config.modeDemo && !akunSaya.length) {
+  if (!akunSaya.length) {
     throw galat400(
       `Hubungkan akun ${namaPlatform} Anda di Profil Saya dulu, supaya kami bisa memastikan video ini milik Anda.`,
     )
@@ -307,16 +307,18 @@ export async function setorTautanVideo({ kampanyeId, kreator, url, judul }) {
   // (oEmbed memberi nama tampilan, bukan nama akun).
   const penulis = tanpaAt(info.penulis)
   const akunPasti = info.sumberData === 'scrapecreators' && penulis
-  if (!config.modeDemo && akunPasti && !akunSaya.includes(penulis)) {
+  if ((config.modeDemo && (!akunPasti || !akunSaya.includes(penulis))) || (akunPasti && !akunSaya.includes(penulis))) {
     throw new GalatHttp(
       422,
-      `Video ini diunggah akun @${penulis}, bukan akun ${namaPlatform} Anda (@${akunSaya[0]}). Setor video dari akun Anda sendiri.`,
+      !akunPasti
+        ? `Kepemilikan video ${namaPlatform} ini tidak bisa dipastikan. Pastikan akun ${namaPlatform} sudah terhubung dan setor video dari profil Anda sendiri.`
+        : `Video ini diunggah akun @${penulis}, bukan akun ${namaPlatform} Anda (@${akunSaya[0]}). Setor video dari akun Anda sendiri.`,
     )
   }
   // Kapan diunggah. Video lama yang viral tidak boleh ikut dibayar.
   const lamaran = db.prepare('SELECT dibuat_pada FROM lamaran WHERE kampanye_id = ? AND kreator_id = ?').get(k.id, kreator.id)
   const bergabung = Date.parse(`${lamaran?.dibuat_pada?.replace(' ', 'T')}Z`)
-  if (!config.modeDemo && info.diunggahPada && Number.isFinite(bergabung)) {
+  if (info.diunggahPada && Number.isFinite(bergabung)) {
     if (info.diunggahPada * 1000 < bergabung - TOLERANSI_UNGGAH_JAM * 3600_000) {
       throw galat409('Video ini diunggah sebelum Anda bergabung di kampanye. Setor video baru yang dibuat untuk kampanye ini.')
     }

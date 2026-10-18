@@ -269,7 +269,7 @@ export default function SetorVideo() {
                 <h2 className="section-title">Tempel Tautan Video</h2>
                 <p className="mt-1 text-sm text-ink-soft">
                   {kampanyeSaya.data?.modeDemo
-                    ? 'Tempel tautan TikTok publik. Tautan tidak harus dari akun profil Anda, tetapi video dan jumlah views harus terbaca serta AI harus menyatakan isinya sesuai kampanye.'
+                    ? 'Tempel tautan TikTok publik dari akun yang sudah terhubung di Profil Saya. Video dan jumlah views harus terbaca, dan AI harus memastikan isinya sesuai kampanye.'
                     : <>TikTok, Instagram Reels, atau YouTube. Video harus diunggah dari akun yang terhubung di{' '}
                       <Link to="/profil" className="font-semibold text-navy underline">Profil Saya</Link>.</>}
                 </p>
@@ -314,7 +314,7 @@ export default function SetorVideo() {
 
                 <ul className="mt-5 space-y-1.5 border-t border-black/5 pt-4 text-xs text-ink-soft">
                   <li className="flex gap-1.5"><Info size={13} className="mt-0.5 shrink-0" /> {kampanyeSaya.data?.modeDemo ? 'Views aktual yang terbaca dihitung dan reward demo diproses otomatis saat target tercapai.' : 'Views yang dihitung hanya kenaikan setelah tautan disetor.'}</li>
-                  <li className="flex gap-1.5"><Info size={13} className="mt-0.5 shrink-0" /> {kampanyeSaya.data?.modeDemo ? 'Video dari akun lain boleh untuk demo. Konten yang tidak cocok dengan brief tidak mendapat reward.' : 'Video yang diunggah sebelum Anda bergabung, atau dari akun orang lain, ditolak.'}</li>
+                  <li className="flex gap-1.5"><Info size={13} className="mt-0.5 shrink-0" /> Video sebelum bergabung atau dari akun selain yang terhubung di profil akan ditolak.</li>
                   {!kampanyeSaya.data?.modeDemo && <li className="flex gap-1.5"><Shield size={13} className="mt-0.5 shrink-0" /> Kenaikan views yang tidak wajar ditahan sampai ditinjau admin.</li>}
                 </ul>
               </motion.form>
