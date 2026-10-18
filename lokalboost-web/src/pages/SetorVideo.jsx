@@ -7,7 +7,7 @@ import { PageHeader, RekberBadge, Tekan, StatusChip, EmptyState } from '../compo
 import StatusReward from '../components/StatusReward.jsx'
 import { MemuatBlok, GalatMuat } from '../components/Muat.jsx'
 import { tekan } from '../motion.js'
-import { ribuan, tanggal, waktuLalu } from '../format.js'
+import { ribuan, rupiah, tanggal, waktuLalu } from '../format.js'
 import { api, useApi } from '../api.js'
 import { useSesi } from '../sesi.jsx'
 import { Play, Sparkles, Info, Check, Eye, Shield } from '../components/icons.jsx'
@@ -18,8 +18,8 @@ import { Play, Sparkles, Info, Check, Eye, Shield } from '../components/icons.js
  * Kreator mengunggah konten di akun TikTok/Instagram/YouTube miliknya sendiri,
  * lalu menempel tautannya di sini setelah diterima di kampanye. Server membaca
  * videonya, memastikan akunnya milik kreator, dan AI mencocokkan keterangan
- * serta ucapan video dengan brief. Views dihitung dari platform, mulai dari
- * saat tautan disetor.
+ * serta ucapan video dengan brief. Mode normal menghitung kenaikan setelah
+ * tautan disetor; mode demo menghitung views aktual yang sudah terbaca.
  */
 
 const KECOCOKAN = {
@@ -29,9 +29,11 @@ const KECOCOKAN = {
 }
 const PLATFORM = { tiktok: 'TikTok', instagram: 'Instagram', youtube: 'YouTube' }
 
-function HasilKecocokan({ video }) {
+function HasilKecocokan({ video, modeDemo }) {
   const h = video.kecocokanHasil || {}
-  const k = KECOCOKAN[video.kecocokan] || KECOCOKAN.tinjau
+  const k = modeDemo && video.kecocokan === 'tinjau'
+    ? { label: 'Belum terverifikasi otomatis', tone: 'danger' }
+    : KECOCOKAN[video.kecocokan] || KECOCOKAN.tinjau
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -42,6 +44,8 @@ function HasilKecocokan({ video }) {
       </div>
       <p className="text-sm text-white/80">{video.moderasi === 'revisi' ? video.catatanModerasi : h.alasan}</p>
       {h.catatanAkun && <p className="text-xs text-gold">{h.catatanAkun}</p>}
+      {h.deskripsiVisual && <p className="text-sm text-white/80"><b>Yang terlihat di video:</b> {h.deskripsiVisual}</p>}
+      {h.produkTerlihat?.length > 0 && <p className="text-xs text-white/70"><b>Produk/objek terdeteksi:</b> {h.produkTerlihat.join(', ')}</p>}
       {h.poinTerpenuhi?.length > 0 && (
         <ul className="space-y-1 text-xs text-white/75">
           {h.poinTerpenuhi.map((p) => (
@@ -56,7 +60,11 @@ function HasilKecocokan({ video }) {
         </div>
       )}
       <p className="border-t border-white/15 pt-3 text-[11px] leading-relaxed text-white/55">
-        {h.sumber === 'ai'
+        {modeDemo && h.sumber === 'gemini_video'
+          ? 'Gemini menilai frame visual dan audio video serta membandingkannya dengan produk dan brief kampanye. Video yang lolos tidak memerlukan persetujuan UMKM.'
+          : modeDemo
+            ? 'Pemeriksaan visual belum memberi hasil yang cukup, jadi video ini tidak diverifikasi otomatis. Coba lagi saat layanan tersedia.'
+            : h.sumber === 'ai'
           ? 'AI membaca keterangan, tagar, dan ucapan video (bila ada), bukan gambarnya. Pemilik usaha tetap bisa meninjau.'
           : 'Pemeriksa AI tidak tersedia saat ini, jadi pemilik usaha yang memutuskan setelah menonton.'}
       </p>
@@ -67,7 +75,9 @@ function HasilKecocokan({ video }) {
 function KartuVideo({ v, onBerubah }) {
   const [sibuk, setSibuk] = useState(false)
   const [galat, setGalat] = useState('')
-  const k = KECOCOKAN[v.kecocokan] || null
+  const k = v.status === 'ditolak' && v.kecocokan === 'tinjau'
+    ? { label: 'Belum terverifikasi otomatis', tone: 'danger' }
+    : KECOCOKAN[v.kecocokan] || null
 
   const perbarui = async () => {
     setSibuk(true)
@@ -258,8 +268,10 @@ export default function SetorVideo() {
               <motion.form variants={fadeUp} onSubmit={setor} className="card p-6">
                 <h2 className="section-title">Tempel Tautan Video</h2>
                 <p className="mt-1 text-sm text-ink-soft">
-                  TikTok, Instagram Reels, atau YouTube. Video harus diunggah dari akun yang terhubung di{' '}
-                  <Link to="/profil" className="font-semibold text-navy underline">Profil Saya</Link>.
+                  {kampanyeSaya.data?.modeDemo
+                    ? 'Tempel tautan TikTok publik. Tautan tidak harus dari akun profil Anda, tetapi video dan jumlah views harus terbaca serta AI harus menyatakan isinya sesuai kampanye.'
+                    : <>TikTok, Instagram Reels, atau YouTube. Video harus diunggah dari akun yang terhubung di{' '}
+                      <Link to="/profil" className="font-semibold text-navy underline">Profil Saya</Link>.</>}
                 </p>
 
                 <label className="label mt-5" htmlFor="url-video">Tautan video</label>
@@ -301,9 +313,9 @@ export default function SetorVideo() {
                 </div>
 
                 <ul className="mt-5 space-y-1.5 border-t border-black/5 pt-4 text-xs text-ink-soft">
-                  <li className="flex gap-1.5"><Info size={13} className="mt-0.5 shrink-0" /> Views yang dihitung hanya kenaikan setelah tautan disetor.</li>
-                  <li className="flex gap-1.5"><Info size={13} className="mt-0.5 shrink-0" /> Video yang diunggah sebelum Anda bergabung, atau dari akun orang lain, ditolak.</li>
-                  <li className="flex gap-1.5"><Shield size={13} className="mt-0.5 shrink-0" /> Kenaikan views yang tidak wajar ditahan sampai ditinjau admin.</li>
+                  <li className="flex gap-1.5"><Info size={13} className="mt-0.5 shrink-0" /> {kampanyeSaya.data?.modeDemo ? 'Views aktual yang terbaca dihitung dan reward demo diproses otomatis saat target tercapai.' : 'Views yang dihitung hanya kenaikan setelah tautan disetor.'}</li>
+                  <li className="flex gap-1.5"><Info size={13} className="mt-0.5 shrink-0" /> {kampanyeSaya.data?.modeDemo ? 'Video dari akun lain boleh untuk demo. Konten yang tidak cocok dengan brief tidak mendapat reward.' : 'Video yang diunggah sebelum Anda bergabung, atau dari akun orang lain, ditolak.'}</li>
+                  {!kampanyeSaya.data?.modeDemo && <li className="flex gap-1.5"><Shield size={13} className="mt-0.5 shrink-0" /> Kenaikan views yang tidak wajar ditahan sampai ditinjau admin.</li>}
                 </ul>
               </motion.form>
 
@@ -316,7 +328,12 @@ export default function SetorVideo() {
                     className="rounded-2xl bg-navy p-6"
                   >
                     <p className="mb-4 text-sm font-semibold text-gold">{hasil.pesan}</p>
-                    <HasilKecocokan video={hasil.video} />
+                    {hasil.pembayaran?.penutupan?.dibayarKeKreator > 0 && (
+                      <p className="mb-4 rounded-lg bg-white/10 px-4 py-3 text-sm font-semibold text-white">
+                        Reward masuk ke saldo demo: {rupiah(hasil.pembayaran.penutupan.dibayarKeKreator)}
+                      </p>
+                    )}
+                    <HasilKecocokan video={hasil.video} modeDemo={hasil.modeDemo} />
                   </motion.div>
                 )}
               </AnimatePresence>

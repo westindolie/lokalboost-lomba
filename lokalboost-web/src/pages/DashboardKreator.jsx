@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'motion/react'
 import AppShell from '../components/AppShell.jsx'
@@ -26,23 +25,6 @@ import { Wallet, Chart, Eye, Sparkles, MapPin, Store, Doc } from '../components/
 export default function DashboardKreator() {
   const { profil } = useSesi()
   const { data, galat, memuat, muatUlang } = useApi(() => api.dashboardKreator(), [])
-  const [demoSibuk, setDemoSibuk] = useState('')
-  const [pesanDemo, setPesanDemo] = useState('')
-
-  const selesaikanDemo = async (kampanye) => {
-    setDemoSibuk(kampanye.id)
-    setPesanDemo('')
-    try {
-      const hasil = await api.simulasiPencairanKampanye(kampanye.id)
-      setPesanDemo(`${hasil.pesan} Total ${rupiah(hasil.totalDibayar)} dibagi kepada ${hasil.kreatorDibayar} kreator.`)
-      await muatUlang()
-    } catch (err) {
-      setPesanDemo(err.message)
-    } finally {
-      setDemoSibuk('')
-    }
-  }
-
   if (memuat) {
     return (
       <AppShell>
@@ -150,16 +132,6 @@ export default function DashboardKreator() {
                         </div>
                         <StatusChip status={st.label} tone={st.tone} denyut={k.status === 'berjalan'} />
                       </Link>
-                      {data.modeDemo && k.demoSiap && k.status === 'berjalan' && (
-                        <button
-                          type="button"
-                          onClick={() => selesaikanDemo(k)}
-                          disabled={Boolean(demoSibuk)}
-                          className="mx-5 mb-4 rounded-lg border border-gold-border bg-gold px-4 py-2 text-sm font-semibold text-gold-text disabled:opacity-60"
-                        >
-                          {demoSibuk === k.id ? 'Mengirim saldo demo…' : 'Selesaikan demo dan masukkan saldo'}
-                        </button>
-                      )}
                     </motion.div>
                   )
                 })}
@@ -173,7 +145,6 @@ export default function DashboardKreator() {
                 )}
               </div>
             )}
-            {pesanDemo && <p role="status" className="mt-3 rounded-lg bg-gold px-4 py-3 text-sm text-gold-text">{pesanDemo}</p>}
           </motion.div>
 
           {/* Rekomendasi Kreator */}

@@ -131,9 +131,9 @@ export const cekProfilAktif = () => Boolean(config.scrapeCreators.apiKey)
 
 
 /** Dipakai juga oleh services/referensi-konten.js (tautan konten tunggal). */
-export async function panggilPenyedia(jalur, params) {
+export async function panggilPenyedia(jalur, params, { batasDetik = config.scrapeCreators.batasDetik } = {}) {
   const kendali = new AbortController()
-  const jam = setTimeout(() => kendali.abort(), config.scrapeCreators.batasDetik * 1000)
+  const jam = setTimeout(() => kendali.abort(), batasDetik * 1000)
   try {
     const jawab = await fetch(
       `${config.scrapeCreators.baseUrl}${jalur}?${new URLSearchParams(params)}`,

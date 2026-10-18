@@ -121,15 +121,33 @@ function bentuk(dasar, isi = {}) {
     // di platform (tautan pendek & panjang ke video yang sama) dan waktu unggah.
     idKonten: isi.idKonten ? String(isi.idKonten) : null,
     diunggahPada: Number(isi.diunggahPada) > 0 ? Number(isi.diunggahPada) : null,
+    // URL CDN internal untuk pemeriksaan visual mode demo. Jangan simpan ke
+    // DB atau kembalikan langsung ke frontend: URL ini bertanda tangan.
+    mediaUrl: isi.mediaUrl || null,
+    mediaSizeBytes: angka(isi.mediaSizeBytes),
     catatan: isi.catatan || null,
   }
 }
 
 async function lewatScrapeCreators({ platform, url }, { transkrip = true } = {}) {
   if (platform === 'tiktok') {
-    const d = await panggilPenyedia('/v2/tiktok/video', transkrip ? { url, get_transcript: 'true' } : { url })
+    const d = await panggilPenyedia(
+      '/v2/tiktok/video',
+      transkrip ? { url, get_transcript: 'true' } : { url },
+      { batasDetik: 10 },
+    )
     const a = d?.aweme_detail
     if (!a) return null
+    const video = a.video || {}
+    const alamatUnduh = video.download_no_watermark_addr
+    const pilihan = [
+      alamatUnduh,
+      ...(video.has_watermark === false ? (video.bit_rate || []).map((x) => x.play_addr) : []),
+      ...(video.has_watermark === false ? [video.play_addr] : []),
+    ]
+      .filter((x) => x?.url_list?.[0] && (!x.data_size || x.data_size <= 12 * 1024 * 1024))
+      .sort((x, y) => (y.data_size || 0) - (x.data_size || 0))
+    const media = pilihan[0]
     return {
       terbaca: true,
       sumberData: 'scrapecreators',
@@ -141,6 +159,8 @@ async function lewatScrapeCreators({ platform, url }, { transkrip = true } = {})
       suka: a.statistics?.digg_count,
       komentar: a.statistics?.comment_count,
       durasiDetik: a.video?.duration ? a.video.duration / 1000 : null,
+      mediaUrl: media?.url_list?.[0] || null,
+      mediaSizeBytes: media?.data_size || null,
       transkrip: typeof d.transcript === 'string' ? d.transcript.replace(/^WEBVTT\s*/i, '') : null,
       idKonten: a.aweme_id,
       diunggahPada: a.create_time,

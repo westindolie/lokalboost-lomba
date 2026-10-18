@@ -465,7 +465,7 @@ function PitaModeDemo() {
   if (!aktif) return null
   return (
     <p className="bg-navy px-4 py-1.5 text-center text-xs text-white/85">
-      MODE DEMO: pembayaran dan saldo hanya simulasi, tidak ada uang sungguhan dan saldo tidak bisa ditarik. Data dapat direset sewaktu-waktu.
+      MODE DEMO: saldo dan pendanaan kampanye simulasi. Tautan video serta views dibaca dari platform, reward masuk otomatis setelah target tercapai. Saldo tidak bisa ditarik dan data dapat direset.
     </p>
   )
 }

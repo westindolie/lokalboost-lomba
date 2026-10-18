@@ -63,13 +63,18 @@ npm run dev      # port 5173
 
 Buka <http://localhost:5173>.
 
-### Alur UMKM ke kreator tanpa views sungguhan
+### Alur demo dengan saldo awal nol
 
-Mode demo membuat biaya pasang dan setor anggaran kampanye menjadi simulasi.
-Setelah kreator mengirim tautan video yang disetujui, tombol **Selesaikan demo
-dan masukkan saldo** membagi anggaran tunai kepada kreator yang videonya
-diterima. Sistem tidak membuat tayangan palsu; laporan tetap menunjukkan views
-yang benar-benar ada. Saldo demo terlihat di dompet, tetapi penarikan dinonaktifkan.
+Seed demo hanya membuat akun login. Kampanye, saldo, transaksi, tayangan, dan
+portofolio contoh dikosongkan. UMKM membuat kampanye dan mendanainya secara
+simulasi. Kreator ikut langsung, kemudian kirim tautan video TikTok publik.
+Video boleh dari akun mana pun. Metadata dan jumlah views harus terbaca dari
+penyedia data. Gemini memeriksa frame video dan audionya untuk memastikan
+produk yang tampak cocok dengan kampanye; caption hanya bukti tambahan. Views yang
+sudah ada dihitung dari nol. Saat target tercapai, reward demo diproses otomatis
+tanpa persetujuan UMKM. Saldo demo tidak dapat ditarik sebagai uang sungguhan.
+Pemeriksaan visual otomatis memerlukan Gemini API dan berkas video hingga 12 MB;
+jika media atau layanan AI tidak tersedia, sistem menolak pencairan otomatis.
 
 Aktifkan hanya untuk presentasi:
 
@@ -84,17 +89,17 @@ Lalu di situs lokal:
 
 1. UMKM buat kampanye reward tunai dan tentukan anggaran sendiri. Mode demo
    melewati biaya pasang, pemeriksaan etika tetap berjalan, lalu anggaran
-   simulasi masuk ke Rekber.
+   simulasi masuk ke Rekber. Saldo dompet kedua akun tetap mulai dari nol.
 2. Kreator masuk ke marketplace dan langsung mengikuti kampanye. Tidak ada
    undangan atau persetujuan UMKM. Untuk demo, kreator tidak perlu
-   menghubungkan akun sosial; mode normal tetap mensyaratkan profil dan
-   verifikasi minimal satu akun sosial.
-3. Kreator kirim tautan video. Video tetap harus lolos pemeriksaan AI/UMKM,
-   tetapi jumlah views tidak menjadi syarat demo.
-4. Setelah video berstatus tayang, kreator tekan **Selesaikan demo dan masukkan
-   saldo** dari dashboard. Anggaran dibagi rata kepada para kreator yang
-   sudah mengirim video yang disetujui. Kampanye ditutup dan sisa dana, bila
-   ada, kembali ke dompet UMKM.
+   menghubungkan akun untuk bergabung. Untuk setor video demo, kreator boleh
+   memakai tautan TikTok dari akun mana pun.
+3. Kreator kirim tautan video TikTok publik. Platform harus bisa membaca video
+   dan views. Gemini memeriksa gambar dan audio video terhadap brief; video
+   mie tidak akan lolos untuk kampanye minuman hanya karena caption menyebut mie. Video yang cocok otomatis
+   diverifikasi, views dihitung, dan reward diproses tanpa persetujuan UMKM.
+4. Saat target kampanye tercapai, saldo reward masuk otomatis ke dompet kreator
+   dalam bentuk saldo demo. Penarikan tetap dinonaktifkan.
 
 Transaksi simulasi diberi awalan `DEMO:`. Jangan pakai mode ini untuk transaksi
 atau saldo sungguhan. Untuk demo online, `MODE_DEMO=true` harus diatur pada

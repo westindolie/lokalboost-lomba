@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { db } from '../lib/db.js'
+import { config } from '../config.js'
 import { wajibPeran } from '../lib/auth.js'
 import { batasLaju } from '../lib/batas.js'
 import { bungkus, galat400, galat404, galat409, wajibAda } from '../lib/util.js'
@@ -63,7 +64,7 @@ rutaKreator.get(
     const daftar = db
       .prepare(`SELECT * FROM kampanye k WHERE EXISTS (SELECT 1 FROM lamaran lp WHERE lp.kampanye_id = k.id AND lp.kreator_id = ? AND lp.status = 'disetujui') ORDER BY k.dibuat_pada DESC`)
       .all(req.pengguna.id)
-    res.json({ kampanye: daftar.map((k) => bentukKampanye(k, { ringkas: true })) })
+    res.json({ modeDemo: config.modeDemo, kampanye: daftar.map((k) => bentukKampanye(k, { ringkas: true })) })
   }),
 )
 

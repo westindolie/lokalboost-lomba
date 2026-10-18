@@ -146,7 +146,6 @@ export const api = {
   tagihanBiayaPasang: (data) => minta('POST', '/api/pembayaran/biaya-pasang/tagihan', { body: data }),
   bayarBiayaPasangSimulasi: () => minta('POST', '/api/pembayaran/biaya-pasang/simulasi'),
   setorDana: (id, data) => minta('POST', `/api/kampanye/${id}/setor`, { body: data }),
-  simulasiPencairanKampanye: (id) => minta('POST', `/api/kampanye/${id}/demo-selesaikan`),
   periksaKampanye: (id) => minta('POST', `/api/kampanye/${id}/periksa`),
   moderasiKampanye: (id) => minta('GET', `/api/kampanye/${id}/moderasi`),
   bandingKampanye: (id, alasan) => minta('POST', `/api/kampanye/${id}/banding`, { body: { alasan } }),

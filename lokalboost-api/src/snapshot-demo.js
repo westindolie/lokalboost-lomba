@@ -21,6 +21,7 @@ for (const akhiran of ['', '-wal', '-shm']) fs.rmSync(tujuan + akhiran, { force:
 
 // db.js membuka DB_PATH saat diimpor, jadi env harus terpasang lebih dulu.
 process.env.DB_PATH = tujuan
+process.env.MODE_DEMO = 'true'
 // Snapshot selalu berkas lokal murni. Saat build Vercel env Turso ikut terbaca,
 // dan tanpa baris ini db.js masuk mode replika: seed menulis puluhan ribu
 // baris satu per satu lewat jaringan ke Turso (build tertahan belasan menit).

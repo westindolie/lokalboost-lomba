@@ -166,16 +166,22 @@ rutaVideo.post(
     const b = wajibAda(req.body, ['kampanyeId', 'url'])
     const judul = b.judul ? pastikanTeks(b.judul, 'Judul video', { min: 3, maks: 120 }) : null
     const v = await setorTautanVideo({ kampanyeId: b.kampanyeId, kreator: req.pengguna, url: b.url, judul })
-    const pesan = config.modeDemo
-      ? 'Tautan dicatat untuk demo. Akun, isi video, dan views tidak diverifikasi; saldo yang diterima nanti hanya simulasi.'
+    const pembayaran = config.modeDemo && v.status === 'tayang' ? prosesPembayaran(v.kampanye_id) : null
+    const pesan = config.modeDemo && v.status === 'tayang'
+      ? pembayaran?.penutupan
+        ? 'Video TikTok terbaca dan terverifikasi. Target tercapai, reward demo langsung masuk ke saldo kreator.'
+        : 'Video TikTok terbaca dan terverifikasi. Views aktual dihitung dan reward demo diproses otomatis.'
       : v.status === 'tayang'
         ? 'Video sesuai kampanye. Views-nya mulai dihitung dari sekarang.'
         : v.status === 'diproses'
           ? 'Video tersimpan. AI belum yakin videonya sesuai, pemilik usaha akan meninjau.'
+          : config.modeDemo && v.kecocokan === 'tinjau'
+            ? 'AI belum bisa memastikan produk yang terlihat cocok dengan kampanye. Video tidak disetujui otomatis dan reward belum cair.'
           : v.moderasi === 'revisi'
             ? 'Video ditahan: isinya menyinggung usaha lain.'
             : 'Video dinilai tidak sesuai kampanye. Setor video lain yang mengikuti brief.'
-    res.status(201).json({ pesan, video: bentukVideo(v) })
+    const videoTerbaru = db.prepare('SELECT * FROM video WHERE id = ?').get(v.id)
+    res.status(201).json({ pesan, video: bentukVideo(videoTerbaru), pembayaran, modeDemo: config.modeDemo })
   }),
 )
 

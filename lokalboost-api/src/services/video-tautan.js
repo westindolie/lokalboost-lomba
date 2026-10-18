@@ -1,18 +1,16 @@
 /**
  * Setor video lewat TAUTAN (pengganti unggah berkas, 18 Okt 2026).
  * ------------------------------------------------------------------
- * Kreator mengunggah kontennya di akun TikTok/Instagram/YouTube miliknya
- * sendiri, lalu menempel tautannya di sini. Tiga hal diperiksa sebelum
- * views-nya dihitung:
+ * Kreator menempel tautan TikTok/Instagram/YouTube. Dalam mode normal,
+ * kepemilikan akun dan waktu unggah juga diperiksa. Mode demo melonggarkan dua
+ * pemeriksaan itu, tetapi tetap mewajibkan data platform, views, dan kecocokan
+ * AI agar payout tidak dibuat dari tautan yang tidak terbaca.
  *
- *  1. Milik siapa: akun pengunggah harus salah satu akun yang terhubung di
- *     profil kreator. Tanpa ini, kreator bisa menempel video viral orang lain.
- *  2. Kapan diunggah: video yang sudah ada sebelum kreator bergabung tidak
- *     dihitung (bila platform memberi tanggal unggah).
- *  3. Cocok dengan kampanye: AI membandingkan keterangan, tagar, dan transkrip
- *     ucapan (TikTok) dengan brief. AI hanya membaca TEKS itu, tidak menonton
- *     gambarnya. Tanpa AI, keputusan diserahkan ke pemilik usaha; sistem tidak
- *     pernah meloloskan otomatis tanpa AI.
+ *  Dalam mode normal, akun pengunggah harus terhubung dan video harus diunggah
+ *  setelah kreator bergabung. Mode demo melewati dua syarat itu dan Gemini
+ *  menilai frame serta audio video TikTok. Caption dan transkrip jadi bukti
+ *  tambahan, bukan pengganti pemeriksaan visual. Tanpa hasil AI visual yang
+ *  tegas, sistem demo tidak mencairkan reward.
  *
  * Views yang dibayar = kenaikan views platform SETELAH tautan disetor
  * (views_awal sebagai titik nol). Kenaikan di atas batas wajar ditahan untuk
@@ -21,8 +19,8 @@
  */
 import { db } from '../lib/db.js'
 import { config } from '../config.js'
-import { GalatHttp, buatId, galat400, galat403, galat404, galat409, galat429, sekarang } from '../lib/util.js'
-import { tanyaModel } from './ai.js'
+import { GalatHttp, buatId, galat400, galat403, galat404, galat409, galat429, galat503, sekarang } from '../lib/util.js'
+import { analisisKecocokanVisual, BATAS_TRANSKRIP_BYTE, tanyaModel } from './ai.js'
 import { ambilReferensi, uraiTautanKonten } from './referensi-konten.js'
 import { cekProfilAktif, uraiTautanProfil } from './profil-sosial.js'
 import { periksaBagian } from './moderasi-kampanye.js'
@@ -111,6 +109,83 @@ function teksVideo(info) {
   ]
     .filter(Boolean)
     .join('\n\n')
+}
+
+const CDN_TIKTOK = ['tiktokcdn.com', 'tiktokcdn-eu.com', 'tiktokcdn-us.com', 'tiktokv.com']
+
+function urlCdnTiktok(teks) {
+  let url
+  try { url = new URL(teks) } catch { throw new GalatHttp(422, 'Video tidak memiliki sumber visual yang bisa dibaca.') }
+  const host = url.hostname.toLowerCase()
+  if (url.protocol !== 'https:' || !CDN_TIKTOK.some((d) => host === d || host.endsWith(`.${d}`))) {
+    throw new GalatHttp(422, 'Sumber video TikTok tidak dapat diverifikasi dengan aman.')
+  }
+  return url
+}
+
+async function unduhVideoTikTok(info) {
+  if (!info.mediaUrl) throw new GalatHttp(422, 'TikTok tidak menyediakan video untuk pemeriksaan visual. Pastikan tautan mengarah ke video publik.')
+  let url = urlCdnTiktok(info.mediaUrl)
+  const sinyal = AbortSignal.timeout(8000)
+  let jawab
+  for (let i = 0; i < 4; i++) {
+    jawab = await fetch(url, { signal: sinyal, redirect: 'manual' })
+    if (![301, 302, 303, 307, 308].includes(jawab.status)) break
+    const lokasi = jawab.headers.get('location')
+    if (!lokasi) throw new GalatHttp(422, 'Sumber video TikTok tidak mengarahkan ke berkas video.')
+    url = urlCdnTiktok(new URL(lokasi, url).href)
+  }
+  if (!jawab?.ok || !jawab.body) throw new GalatHttp(422, 'Berkas video TikTok tidak bisa diambil untuk pemeriksaan visual.')
+  const tipe = (jawab.headers.get('content-type') || '').toLowerCase()
+  if (!(tipe.startsWith('video/') || tipe.includes('octet-stream'))) {
+    throw new GalatHttp(422, 'Sumber TikTok tidak mengembalikan berkas video.')
+  }
+  const panjang = Number(jawab.headers.get('content-length'))
+  if (panjang > BATAS_TRANSKRIP_BYTE) throw new GalatHttp(422, 'Video terlalu besar untuk pemeriksaan visual demo (maksimal 12 MB).')
+
+  const potongan = []
+  let total = 0
+  const pembaca = jawab.body.getReader()
+  while (true) {
+    const { done, value } = await pembaca.read()
+    if (done) break
+    total += value.byteLength
+    if (total > BATAS_TRANSKRIP_BYTE) {
+      await pembaca.cancel()
+      throw new GalatHttp(422, 'Video terlalu besar untuk pemeriksaan visual demo (maksimal 12 MB).')
+    }
+    potongan.push(Buffer.from(value))
+  }
+  return Buffer.concat(potongan, total)
+}
+
+async function periksaKecocokanVisualDemo(k, brief, info) {
+  let isi
+  try {
+    isi = await unduhVideoTikTok(info)
+  } catch (e) {
+    if (e instanceof GalatHttp) throw e
+    console.warn(`[VIDEO-TAUTAN] Unduh video untuk pemeriksaan visual gagal: ${e.message}`)
+    throw galat503('Video TikTok tidak bisa diambil untuk pemeriksaan visual. Coba tautan publik lain atau ulangi nanti.')
+  }
+  let hasil
+  try {
+    hasil = await analisisKecocokanVisual({ isi, kampanye: k, brief, metadata: info })
+  } catch (e) {
+    console.warn(`[VIDEO-TAUTAN] Pemeriksaan visual wajib gagal: ${e.message}`)
+    throw galat503('Pemeriksaan visual AI sedang tidak tersedia. Video belum bisa diverifikasi atau dibayar; coba lagi nanti.')
+  }
+  const peta = { cocok: 'cocok', perlu_tinjau: 'tinjau', tidak_cocok: 'tidak_cocok' }
+  return {
+    status: peta[hasil.keputusan],
+    alasan: hasil.alasan,
+    deskripsiVisual: hasil.deskripsiVisual,
+    produkTerlihat: hasil.produkTerlihat,
+    poinTerpenuhi: hasil.poinTerpenuhi,
+    poinKurang: hasil.poinKurang,
+    sumber: 'gemini_video',
+    model: hasil.model,
+  }
 }
 
 /** Tanpa AI: tidak pernah "cocok". Hanya membantu pemilik usaha memutuskan. */
@@ -202,36 +277,9 @@ export async function setorTautanVideo({ kampanyeId, kreator, url, judul }) {
     throw galat409(`Maksimal ${MAKS_VIDEO_PER_KREATOR} video per kreator di satu kampanye.`)
   }
 
-  if (config.modeDemo) {
-    const kembar = db.prepare('SELECT kampanye_id FROM video WHERE url = ?').get(dasar.url)
-    if (kembar) throw galat409('Tautan ini sudah dipakai di kampanye lain.')
-    const id = buatId('vid')
-    const namaPlatform = { tiktok: 'TikTok', instagram: 'Instagram', youtube: 'YouTube' }[dasar.platform]
-    const hasilDemo = JSON.stringify({
-      status: 'demo',
-      alasan: 'Tautan dicatat untuk simulasi presentasi. Platform, pemilik akun, isi video, dan views tidak diperiksa.',
-    })
-    db.prepare(
-      `INSERT INTO video
-         (id, kampanye_id, kreator_id, judul, durasi_detik, status, moderasi, sumber, url, platform,
-          platform_id, views_diakui, views_tertahan, kecocokan, kecocokan_hasil)
-       VALUES (?, ?, ?, ?, 30, 'tayang', 'lolos', 'tautan', ?, ?, ?, 0, 0, 'demo', ?)`
-    ).run(
-      id,
-      k.id,
-      kreator.id,
-      String(judul || `Tautan demo ${namaPlatform}`).slice(0, 120),
-      dasar.url,
-      dasar.platform,
-      `${dasar.platform}:DEMO:${id}`,
-      hasilDemo,
-    )
-    return db.prepare('SELECT * FROM video WHERE id = ?').get(id)
-  }
-
-  const akunSaya = akunKreator(kreator.id, dasar.platform)
+  const akunSaya = config.modeDemo ? [] : akunKreator(kreator.id, dasar.platform)
   const namaPlatform = { tiktok: 'TikTok', instagram: 'Instagram', youtube: 'YouTube' }[dasar.platform]
-  if (!akunSaya.length) {
+  if (!config.modeDemo && !akunSaya.length) {
     throw galat400(
       `Hubungkan akun ${namaPlatform} Anda di Profil Saya dulu, supaya kami bisa memastikan video ini milik Anda.`,
     )
@@ -240,6 +288,9 @@ export async function setorTautanVideo({ kampanyeId, kreator, url, judul }) {
   const info = await ambilReferensi(dasar.url, { transkrip: dasar.platform === 'tiktok' })
   if (!info.terbaca) {
     throw new GalatHttp(422, 'Video tidak bisa dibaca. Pastikan videonya publik dan tautannya benar.')
+  }
+  if (config.modeDemo && info.views == null) {
+    throw new GalatHttp(422, 'Video terbaca, tetapi jumlah views tidak tersedia. Tautan ini belum bisa diverifikasi atau dibayar untuk demo.')
   }
 
   const idPlatform = `${dasar.platform}:${info.idKonten || dasar.url}`
@@ -256,17 +307,16 @@ export async function setorTautanVideo({ kampanyeId, kreator, url, judul }) {
   // (oEmbed memberi nama tampilan, bukan nama akun).
   const penulis = tanpaAt(info.penulis)
   const akunPasti = info.sumberData === 'scrapecreators' && penulis
-  if (akunPasti && !akunSaya.includes(penulis)) {
+  if (!config.modeDemo && akunPasti && !akunSaya.includes(penulis)) {
     throw new GalatHttp(
       422,
       `Video ini diunggah akun @${penulis}, bukan akun ${namaPlatform} Anda (@${akunSaya[0]}). Setor video dari akun Anda sendiri.`,
     )
   }
-
   // Kapan diunggah. Video lama yang viral tidak boleh ikut dibayar.
   const lamaran = db.prepare('SELECT dibuat_pada FROM lamaran WHERE kampanye_id = ? AND kreator_id = ?').get(k.id, kreator.id)
   const bergabung = Date.parse(`${lamaran?.dibuat_pada?.replace(' ', 'T')}Z`)
-  if (info.diunggahPada && Number.isFinite(bergabung)) {
+  if (!config.modeDemo && info.diunggahPada && Number.isFinite(bergabung)) {
     if (info.diunggahPada * 1000 < bergabung - TOLERANSI_UNGGAH_JAM * 3600_000) {
       throw galat409('Video ini diunggah sebelum Anda bergabung di kampanye. Setor video baru yang dibuat untuk kampanye ini.')
     }
@@ -274,7 +324,7 @@ export async function setorTautanVideo({ kampanyeId, kreator, url, judul }) {
 
   const brief = ambilBrief(k.id)
   const [kecocokan, etika] = await Promise.all([
-    periksaKecocokan(k, brief, info),
+    config.modeDemo ? periksaKecocokanVisualDemo(k, brief, info) : periksaKecocokan(k, brief, info),
     periksaBagian(
       [
         { asal: 'Keterangan video', teks: info.keterangan },
@@ -282,14 +332,20 @@ export async function setorTautanVideo({ kampanyeId, kreator, url, judul }) {
       ].filter((b) => b.teks),
     ),
   ])
-  if (!akunPasti) {
+  if (!akunPasti && !config.modeDemo) {
     kecocokan.status = kecocokan.status === 'tidak_cocok' ? 'tidak_cocok' : 'tinjau'
     kecocokan.catatanAkun = 'Nama akun pengunggah tidak bisa dipastikan otomatis. Pemilik usaha perlu memastikan.'
   }
   etika.ucapanTerperiksa = Boolean(info.transkrip)
 
   const ditolakEtika = etika.status === 'ditolak'
-  const status = ditolakEtika || kecocokan.status === 'tidak_cocok' ? 'ditolak' : kecocokan.status === 'cocok' ? 'tayang' : 'diproses'
+  const status = ditolakEtika || kecocokan.status === 'tidak_cocok'
+    ? 'ditolak'
+    : kecocokan.status === 'cocok'
+      ? 'tayang'
+      : config.modeDemo
+        ? 'ditolak'
+        : 'diproses'
   const id = buatId('vid')
   db.prepare(
     `INSERT INTO video
@@ -304,7 +360,7 @@ export async function setorTautanVideo({ kampanyeId, kreator, url, judul }) {
     String(judul || info.judul || `Video ${namaPlatform}`).slice(0, 120),
     Math.round(info.durasiDetik || 30),
     status,
-    ditolakEtika ? 'revisi' : 'menunggu',
+    ditolakEtika ? 'revisi' : config.modeDemo && status === 'ditolak' ? 'lolos' : 'menunggu',
     ditolakEtika ? `Otomatis: video menjelekkan usaha lain. ${etika.alasan} ${etika.saran}`.trim() : null,
     JSON.stringify(etika),
     dasar.url,
@@ -318,7 +374,7 @@ export async function setorTautanVideo({ kampanyeId, kreator, url, judul }) {
     JSON.stringify({ ...kecocokan, diperiksaPada: sekarang(), keterangan: info.keterangan, tagar: info.tagar }),
   )
 
-  kirimNotifikasi(k.umkm_id, {
+  if (!config.modeDemo) kirimNotifikasi(k.umkm_id, {
     jenis: 'kampanye',
     judul: status === 'diproses' ? 'Video kreator perlu Anda tinjau' : 'Kreator menyetor video',
     isi:
@@ -327,6 +383,12 @@ export async function setorTautanVideo({ kampanyeId, kreator, url, judul }) {
         : `${kreator.nama} menyetor video untuk "${k.nama}".`,
     tautan: `/umkm/kampanye/${k.id}/laporan`,
   })
+
+  // Di demo, views yang sudah terbaca dari platform dihitung sejak nol hanya
+  // setelah pemilik akun dan kecocokan konten benar-benar terverifikasi.
+  if (config.modeDemo && status === 'tayang' && info.views != null) {
+    db.prepare('UPDATE video SET views_diakui = ?, views_tertahan = 0 WHERE id = ?').run(info.views, id)
+  }
 
   return db.prepare('SELECT * FROM video WHERE id = ?').get(id)
 }
@@ -352,7 +414,9 @@ export async function perbaruiViewsVideo(video, { paksa = false } = {}) {
     throw new GalatHttp(422, 'Views video tidak bisa dibaca. Mungkin videonya sudah privat atau dihapus.')
   }
   const awal = video.views_awal ?? info.views
-  const { diakui, tertahan } = hitungViews({ ...video, views_awal: awal }, info.views)
+  const { diakui, tertahan } = config.modeDemo
+    ? { diakui: Math.max(video.views_diakui || 0, info.views), tertahan: 0 }
+    : hitungViews({ ...video, views_awal: awal }, info.views)
   db.prepare(
     `UPDATE video SET views_awal = ?, views_platform = ?, views_diakui = ?, views_tertahan = ?, views_diukur_pada = ?
      WHERE id = ?`,

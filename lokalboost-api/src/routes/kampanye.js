@@ -18,7 +18,6 @@ import { prosesPembayaran, selesaikanKampanye, setorDana, setorDanaInti } from '
 import { deteksiAnomali, laporanAntiFraud } from '../services/antifraud.js'
 import { statistikKampanye } from '../services/laporan.js'
 import { kirimNotifikasi } from '../services/notifikasi.js'
-import { simulasiPencairanKampanye } from '../services/demo.js'
 import { ringkasLaporan } from '../services/ai.js'
 import { midtransAktif } from '../services/midtrans.js'
 import { config } from '../config.js'
@@ -639,16 +638,6 @@ rutaKampanye.post(
       kampanye = bentukKampanye(ambil(k.id))
     }
     res.json({ moderasi, modeDemo: config.modeDemo, kampanye })
-  }),
-)
-
-/** POST /api/kampanye/:id/demo-selesaikan — pencairan saldo simulasi tanpa views. */
-rutaKampanye.post(
-  '/:id/demo-selesaikan',
-  wajibPeran('kreator'),
-  bungkus((req, res) => {
-    const hasil = simulasiPencairanKampanye(req.params.id, req.pengguna.id)
-    res.json(hasil)
   }),
 )
 

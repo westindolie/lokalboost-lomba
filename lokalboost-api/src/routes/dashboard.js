@@ -43,13 +43,7 @@ rutaDashboard.get(
 
     res.json({
       ringkasan: ringkasanKreator(req.pengguna.id),
-      kampanyeSaya: kampanyeSaya.map((k) => ({
-        ...bentukKampanye(k, { ringkas: true }),
-        demoSiap: config.modeDemo && k.model_reward === 'tunai' && Boolean(db.prepare(
-          `SELECT 1 FROM video WHERE kampanye_id = ? AND kreator_id = ?
-           AND status = 'tayang' LIMIT 1`,
-        ).get(k.id, req.pengguna.id)),
-      })),
+      kampanyeSaya: kampanyeSaya.map((k) => bentukKampanye(k, { ringkas: true })),
       modeDemo: config.modeDemo,
       rekomendasi: rekomendasi.map((k) => ({
         ...bentukKampanye(k, { ringkas: true }),
